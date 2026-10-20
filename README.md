@@ -1,0 +1,101 @@
+# Today
+
+A daily task list that resets every morning. It's a static PWA: plain HTML, CSS and JavaScript modules, with no build step, no backend and no accounts. Everything is stored on your phone, in `localStorage`.
+
+## Run it locally
+
+```bash
+cd ~/Documents/today
+python3 -m http.server 8080
+```
+
+Open http://localhost:8080.
+
+- The service worker is **skipped on localhost**, so your edits show up on reload. To test offline mode locally, open http://localhost:8080/?sw.
+- On your iPhone over Wi-Fi, open `http://<your-Mac's-IP>:8080`. The app works, haptics included, but offline mode and a real "Add to Home Screen" install need HTTPS, so deploy to try those.
+- In the browser console, `__today.store.state` shows all your data.
+
+## Deploy to GitHub Pages (current setup)
+
+This folder is a git repo published with GitHub Pages from the `main` branch root. To ship an update:
+
+1. Bump `VERSION` in `sw.js`.
+2. Run:
+
+```bash
+cd ~/Documents/today && git add -A && git commit -m "Update" && git push
+```
+
+Pages rebuilds in about a minute. The site URL is `https://<your-username>.github.io/today/`. `.nojekyll` tells Pages to serve the files as-is. GitHub Pages ignores `_headers`, which is only for Cloudflare.
+
+## Deploy to Cloudflare Pages (alternative)
+
+**Option A: Wrangler CLI (fastest)**
+
+```bash
+cd ~/Documents/today
+npx wrangler pages deploy . --project-name today
+```
+
+The first run asks you to log in and creates the project. You'll get a URL like `https://today-xyz.pages.dev`. Run the same command again to ship updates.
+
+**Option B: Dashboard drag-and-drop.** In Cloudflare, go to Workers & Pages → Create → Pages → Upload assets, then drag the `today` folder in.
+
+**Option C: Git.** Push this folder to a GitHub repo, then go to Workers & Pages → Create → Pages → Connect to Git. Set the build command to *(none)* and the output directory to `/`.
+
+`_headers` makes sure `sw.js`, `index.html` and the manifest are never stale-cached by the CDN.
+
+### Shipping updates
+
+The service worker caches everything for offline use. **When you change any file, bump `VERSION` in `sw.js`** (for example `today-v2`) before you deploy. The phone downloads the new version in the background, and the next launch uses it. If you add a new JS or CSS file, also add it to the `ASSETS` list in `sw.js`.
+
+## Install on iPhone
+
+1. Open your site URL (`…github.io/today/` or `*.pages.dev`) in **Safari**. It has to be Safari, not Chrome.
+2. Tap the **Share** button, then **Add to Home Screen**.
+3. Make sure **Open as Web App** is on, then tap **Add**.
+4. Launch it from the home screen. It runs full-screen, works offline, and keeps its own storage.
+
+Home-screen apps keep their data separate from Safari and aren't subject to Safari's 7-day storage eviction. Still, use **Settings → Export backup** now and then. On iPhone, Export opens the share sheet, so you can pick *Save to Files*.
+
+## How it works
+
+| File | What it does |
+|---|---|
+| `js/store.js` | Load/save the single JSON state blob, export/import, the color palette |
+| `js/rollover.js` | "Day starts at" logic, history snapshots, carry-over, streaks (pure functions) |
+| `js/haptics.js` | `haptic('tap' \| 'success' \| 'snap' \| 'lift' \| 'drop' \| 'celebrate')` |
+| `js/sound.js` | Synthesized Web Audio clicks and pops (off by default) |
+| `js/actions.js` | Every state change plus the feedback that goes with it |
+| `js/ui/render.js` | Header, progress ring, keyed list rendering with FLIP animations |
+| `js/ui/gestures.js` | Swipe to complete/delete, long-press drag to reorder, long-press header |
+| `js/ui/sheets.js` | Bottom sheets: quick add, edit task, category editor, settings |
+| `js/ui/history.js` | 30-day grid |
+| `js/ui/effects.js` | Particle burst, confetti, the "Done." overlay |
+| `js/ui/toast.js` | Undo toast |
+
+**The daily reset.** A PWA can't run in the background, so the app checks the date whenever it opens, comes back to the foreground, or every 30 s while it's open. If the logical day has changed, it:
+
+1. saves yesterday's done/total to history
+2. fills in any skipped days as 0%
+3. deletes finished one-off tasks
+4. offers unfinished one-offs with a one-tap **Carry to today** card
+
+With the default 4:00 AM start, 1:30 AM still counts as yesterday.
+
+**Streak.** The streak counts consecutive days at 100%. Days with nothing scheduled are skipped. An unfinished today doesn't break the streak until the day rolls over.
+
+## Haptics on iOS
+
+iOS Safari has no `navigator.vibrate`. Since iOS 18, toggling a `<input type="checkbox" switch>` plays a system haptic. The app does this through a hidden `<label>` and calls `label.click()` synchronously inside the gesture handler. WebKit only lets this fire during a real user activation (a tap, a finger-lift, a key press), so:
+
+| Pattern | Triggered from | Expected on iPhone |
+|---|---|---|
+| tap | taps on checkboxes and buttons | fires |
+| drop | finger-lift after a drag | fires |
+| success | completing a task: tick + a second tick at 90 ms | first tick fires; the second may be dropped |
+| celebrate | last task: 4 ticks over 440 ms | first tick fires; later ticks may be dropped |
+| snap | crossing the swipe threshold mid-swipe | probably silent (touchmove isn't a user gesture) |
+| lift | long-press timer | probably silent (timers aren't user gestures) |
+
+To check the multi-tick patterns on your phone, open **Settings → Haptics test**. Android uses real `navigator.vibrate` patterns. Other browsers fail silently.
