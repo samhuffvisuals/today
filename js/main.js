@@ -5,7 +5,7 @@ import { haptic, setHapticsEnabled, installHaptics } from './haptics.js';
 import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry, addPack } from './actions.js';
 import { render } from './ui/render.js';
 import { initGestures } from './ui/gestures.js';
-import { openQuickAdd, openEdit, openSettings, openCategory } from './ui/sheets.js';
+import { openQuickAdd, openEdit, openSettings, openCategory, openPack } from './ui/sheets.js';
 import { openHistory } from './ui/history.js';
 import { toast } from './ui/toast.js';
 import { ICON } from './ui/icons.js';
@@ -65,9 +65,40 @@ function boot() {
     }
   });
 
-  $('#packs').addEventListener('click', (e) => {
+  // Packs: tap to add, long-press to edit (category, tasks, name).
+  const packs = $('#packs');
+  let packHold = null;
+  let packHeldUntil = 0;
+  const endHold = () => {
+    if (!packHold) return;
+    clearTimeout(packHold.timer);
+    packHold.el.classList.remove('pressing');
+    packHold = null;
+  };
+  packs.addEventListener('pointerdown', (e) => {
     const b = e.target.closest('.pack');
-    if (b) addPack(b.dataset.id);
+    if (!b || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    endHold();
+    packHold = { el: b, x: e.clientX, y: e.clientY };
+    b.classList.add('pressing');
+    packHold.timer = setTimeout(() => {
+      const id = b.dataset.id;
+      endHold();
+      packHeldUntil = performance.now() + 600;
+      openPack(id);
+    }, 480);
+  });
+  packs.addEventListener('pointermove', (e) => {
+    if (packHold && Math.hypot(e.clientX - packHold.x, e.clientY - packHold.y) > 8) endHold();
+  });
+  packs.addEventListener('pointerup', endHold);
+  packs.addEventListener('pointercancel', endHold);
+  packs.addEventListener('scroll', endHold, { passive: true });
+  packs.addEventListener('click', (e) => {
+    const b = e.target.closest('.pack');
+    if (!b) return;
+    if (performance.now() < packHeldUntil) return; // the tap that ended a long-press
+    addPack(b.dataset.id);
   });
 
   $('#carry').addEventListener('click', (e) => {

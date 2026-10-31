@@ -214,15 +214,23 @@ export function deleteCategory(id) {
 export function savePack({ id, name, emoji, catId, items }) {
   const s = store.state;
   let p = id && s.packs.find((x) => x.id === id);
-  if (p) Object.assign(p, { name, emoji, catId, items: [...items] });
-  else {
+  if (p) {
+    // Moving the pack to another group takes today's tasks that came from it along.
+    if (p.catId !== catId) {
+      const names = new Set(items.map((x) => x.trim().toLowerCase()));
+      for (const t of s.tasks) {
+        if (t.type === 'today' && t.dayKey === s.day.key && t.catId === p.catId && names.has(t.text.trim().toLowerCase())) t.catId = catId;
+      }
+    }
+    Object.assign(p, { name, emoji, catId, items: [...items] });
+  } else {
     if (s.packs.length >= MAX_PACKS) return null;
     p = { id: uid(), name, emoji, catId, items: [...items] };
     s.packs.push(p);
   }
   store.save();
   haptic('success');
-  render();
+  render({ animate: true });
   return p;
 }
 

@@ -271,6 +271,7 @@ label.hap > input {
   transition: transform .45s var(--spring), opacity .3s;
 }
 .pack:active { transform: scale(.93); }
+.pack.pressing { transition-duration: .5s; transform: scale(.9); background: var(--glass-2); }
 .pack-emoji { font-size: 22px; }
 .pack-n {
   min-width: 34px;
@@ -774,6 +775,7 @@ textarea.field { height: auto; padding: 14px 18px; line-height: 1.4; resize: non
 }
 .swatch[aria-pressed="true"] { transform: scale(1.08); box-shadow: 0 0 0 3px var(--surface-2), 0 0 0 6px var(--c); }
 .pack-sheet .chips { margin-top: 4px; }
+.pack-sheet .emoji-pick { margin-top: 4px; }
 
 /* Settings */
 .set-group { background: var(--field); border-radius: 16px; overflow: hidden; }

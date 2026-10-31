@@ -433,11 +433,12 @@ export function openPack(id, { onSave } = {}) {
         <input class="field emoji-field" type="text" value="${esc(emoji)}" aria-label="Emoji" autocomplete="off">
         <input class="field name-field" type="text" value="${esc(p?.name || '')}" placeholder="Pack name" maxlength="24" enterkeyhint="next" aria-label="Pack name" autocapitalize="words">
       </div>
-      <div class="emoji-pick">${EMOJI.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
+      <h3>Goes into</h3>
+      <div class="chips" data-role="chips"></div>
       <h3>Tasks, one per line</h3>
       <textarea class="field items-field" rows="6" placeholder="Download footage&#10;Sort footage&#10;Find song" aria-label="Tasks">${esc((p?.items || []).join('\n'))}</textarea>
-      <h3>Category</h3>
-      <div class="chips" data-role="chips"></div>
+      <h3>Icon</h3>
+      <div class="emoji-pick">${EMOJI.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
       <button class="btn" type="button" data-save>${p ? 'Save' : 'Create pack'}</button>
       ${p ? `<button class="btn danger" type="button" data-del>Delete pack</button>` : ''}`,
   });
@@ -542,7 +543,7 @@ export function openSettings() {
 
       <h3>Packs</h3>
       <div class="set-group" data-role="packs"></div>
-      <p class="hint">A pack drops a whole set of tasks onto today in one tap.</p>
+      <p class="hint">A pack drops a whole set of tasks onto today in one tap. On the main screen, tap a pack to add it and long-press it to edit it.</p>
 
       <h3>Categories</h3>
       <div class="set-group" data-role="cats"></div>
@@ -560,7 +561,7 @@ export function openSettings() {
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v3.4 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · v3.5 · Everything stays on this device.</p>`,
   });
 
   const paintToggles = () =>
