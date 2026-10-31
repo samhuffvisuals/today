@@ -321,6 +321,7 @@ label.hap > input {
 /* ============ Groups ============ */
 
 .group { margin-bottom: 22px; }
+.group.collapsed { margin-bottom: 10px; }
 
 .group-head {
   width: 100%;
@@ -368,6 +369,8 @@ label.hap > input {
   transition: grid-template-rows .42s var(--out), opacity .3s;
 }
 .group.collapsed .group-body { grid-template-rows: 0fr; opacity: 0; }
+/* One grid child only, so 0fr can actually collapse it (a second child would get its own auto row). */
+.group-inner { min-height: 0; }
 
 /* "Add to …" row at the top of each group: a one-off task for today in that group */
 .add-inline {

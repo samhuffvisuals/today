@@ -560,7 +560,7 @@ export function openSettings() {
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v3.3 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · v3.4 · Everything stays on this device.</p>`,
   });
 
   const paintToggles = () =>

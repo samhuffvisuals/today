@@ -141,10 +141,10 @@ function createGroup(id) {
   g.innerHTML = `<button class="group-head" type="button">
       <span class="g-emoji"></span><span class="g-name"></span><span class="g-count"></span>${ICON.chev}
     </button>
-    <div class="group-body">
+    <div class="group-body"><div class="group-inner">
       <button class="add-inline" type="button"><span class="ai-plus">${ICON.plus}</span><span class="ai-text"></span></button>
       <ul class="tasks"></ul>
-    </div>`;
+    </div></div>`;
   return g;
 }
 
