@@ -3,7 +3,7 @@
 import { store, uid, remember, MAX_CATEGORIES, MAX_PACKS } from './store.js';
 import { stats, tasksFor } from './rollover.js';
 import { haptic } from './haptics.js';
-import { renderHeader, renderList, render, taskEl, colorOf, catOf } from './ui/render.js';
+import { renderHeader, renderList, render, taskEl, colorOf, catOf, animateCollapse } from './ui/render.js';
 import { burst, celebrate } from './ui/effects.js';
 import { toast } from './ui/toast.js';
 import { gestureBusy } from './ui/gestures.js';
@@ -180,6 +180,7 @@ export function toggleCollapse(catId) {
   else c[catId] = true;
   store.save();
   haptic('tap');
+  animateCollapse(catId, !!c[catId]);
   renderList();
 }
 

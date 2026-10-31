@@ -362,16 +362,11 @@ label.hap > input {
 .group.collapsed .chev { transform: rotate(-90deg); }
 
 .group-body {
-  display: grid;
-  grid-template-rows: 1fr;
   margin: 0 -10px;
   padding: 0 10px;
   overflow: hidden;
-  transition: grid-template-rows .42s var(--out), opacity .3s;
 }
-.group.collapsed .group-body { grid-template-rows: 0fr; opacity: 0; }
-/* One grid child only, so 0fr can actually collapse it (a second child would get its own auto row). */
-.group-inner { min-height: 0; }
+.group-body[hidden] { display: none; }
 
 /* "Add to …" row at the top of each group: a one-off task for today in that group */
 .add-inline {

@@ -110,6 +110,29 @@ export function renderHeader() {
   updateGroupCounts();
 }
 
+// Slide a group's body open or shut, then let display:none take over.
+export function animateCollapse(catId, collapsed) {
+  const g = groupEls.get(catId);
+  if (!g) return;
+  const body = g.querySelector('.group-body');
+  if (reduceMotion()) {
+    body.hidden = collapsed;
+    return;
+  }
+  body.getAnimations().forEach((a) => a.cancel());
+  g.classList.add('animating');
+  body.hidden = false;
+  const h = body.offsetHeight;
+  const frames = collapsed
+    ? [{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }]
+    : [{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 1 }];
+  const anim = body.animate(frames, { duration: 380, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+  anim.onfinish = anim.oncancel = () => {
+    g.classList.remove('animating');
+    body.hidden = !!store.state.settings.collapsed[catId];
+  };
+}
+
 /* ---------- packs ---------- */
 
 function renderPacks() {
@@ -158,6 +181,8 @@ function updateGroup(g, c, list) {
   const collapsed = !!s.settings.collapsed[c.id];
   g.classList.toggle('collapsed', collapsed);
   g.querySelector('.group-head').setAttribute('aria-expanded', String(!collapsed));
+  // display:none when collapsed, so no browser can keep the space. animateCollapse() handles the transition.
+  if (!g.classList.contains('animating')) g.querySelector('.group-body').hidden = collapsed;
   setCount(g, list);
 }
 
