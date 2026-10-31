@@ -52,7 +52,12 @@ function boot() {
       return openEdit(body.closest('.task').dataset.id);
     }
     const head = e.target.closest('.group-head');
-    if (head) toggleCollapse(head.closest('.group').dataset.cat);
+    if (head) return toggleCollapse(head.closest('.group').dataset.cat);
+    const add = e.target.closest('.add-inline');
+    if (add) {
+      haptic('tap');
+      openQuickAdd({ catId: add.closest('.group').dataset.cat, type: 'today' });
+    }
   });
 
   $('#packs').addEventListener('click', (e) => {

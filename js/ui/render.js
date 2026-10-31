@@ -141,7 +141,10 @@ function createGroup(id) {
   g.innerHTML = `<button class="group-head" type="button">
       <span class="g-emoji"></span><span class="g-name"></span><span class="g-count"></span>${ICON.chev}
     </button>
-    <div class="group-body"><ul class="tasks"></ul></div>`;
+    <div class="group-body">
+      <button class="add-inline" type="button"><span class="ai-plus">${ICON.plus}</span><span class="ai-text"></span></button>
+      <ul class="tasks"></ul>
+    </div>`;
   return g;
 }
 
@@ -150,6 +153,8 @@ function updateGroup(g, c, list) {
   g.style.setProperty('--c', colorOf(c.color));
   g.querySelector('.g-emoji').textContent = c.emoji;
   g.querySelector('.g-name').textContent = c.name;
+  g.querySelector('.ai-text').textContent = `Add to ${c.name}`;
+  g.querySelector('.add-inline').setAttribute('aria-label', `Add a task to ${c.name} for today`);
   const collapsed = !!s.settings.collapsed[c.id];
   g.classList.toggle('collapsed', collapsed);
   g.querySelector('.group-head').setAttribute('aria-expanded', String(!collapsed));

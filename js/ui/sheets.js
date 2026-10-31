@@ -170,10 +170,13 @@ function taskControls(init) {
 
 /* ---------- quick add ---------- */
 
-export function openQuickAdd() {
+// preset: { catId, type } opens the sheet pointed at one group (the "Add to …" row in the list).
+export function openQuickAdd(preset = {}) {
   const s = store.state;
-  const catId = s.categories.some((c) => c.id === s.settings.lastCat) ? s.settings.lastCat : 'general';
-  const ctl = taskControls({ catId, type: s.settings.lastType === 'daily' ? 'daily' : 'today', days: null });
+  const want = preset.catId || s.settings.lastCat;
+  const catId = s.categories.some((c) => c.id === want) ? want : 'general';
+  const type = preset.type || (s.settings.lastType === 'daily' ? 'daily' : 'today');
+  const ctl = taskControls({ catId, type, days: null });
   let added = 0;
 
   const sheet = openSheet({
@@ -523,7 +526,7 @@ export function openSettings() {
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v3.1 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · v3.2 · Everything stays on this device.</p>`,
   });
 
   const paintToggles = () =>

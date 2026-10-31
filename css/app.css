@@ -368,6 +368,35 @@ label.hap > input {
 }
 .group.collapsed .group-body { grid-template-rows: 0fr; opacity: 0; }
 
+/* "Add to …" row at the top of each group: a one-off task for today in that group */
+.add-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px 0 16px;
+  margin: 2px 0 8px;
+  border-radius: 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--c) 45%, transparent);
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 800;
+  text-align: left;
+  transition: transform .4s var(--spring), background .2s;
+}
+.add-inline:active { transform: scale(.97); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.ai-plus {
+  width: 28px; height: 28px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+  color: var(--c);
+}
+.ai-plus svg { width: 16px; height: 16px; }
+
 .tasks {
   list-style: none;
   margin: 0;
