@@ -7,6 +7,7 @@ import { render } from './ui/render.js';
 import { initGestures } from './ui/gestures.js';
 import { openQuickAdd, openEdit, openSettings, openCategory } from './ui/sheets.js';
 import { openHistory } from './ui/history.js';
+import { toast } from './ui/toast.js';
 import { ICON } from './ui/icons.js';
 
 const $ = (s) => document.querySelector(s);
@@ -78,7 +79,11 @@ function boot() {
   });
 
   // Rollover: there's no background execution, so check whenever we come back.
-  document.addEventListener('visibilitychange', () => !document.hidden && checkDay());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    checkDay();
+    navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+  });
   window.addEventListener('focus', checkDay);
   window.addEventListener('pageshow', checkDay);
   document.addEventListener('daycheck', checkDay);
@@ -104,7 +109,21 @@ function boot() {
   // Service worker. Skipped on localhost so edits show up immediately; add ?sw to test offline locally.
   const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   if ('serviceWorker' in navigator && (!local || location.search.includes('sw'))) {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW failed', e));
+    navigator.serviceWorker
+      .register('sw.js')
+      .then((reg) => {
+        // A new version downloaded in the background: offer a one-tap reload.
+        reg.addEventListener('updatefound', () => {
+          const w = reg.installing;
+          w?.addEventListener('statechange', () => {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('New version ready', { action: 'Reload', onAction: () => location.reload(), duration: 15000 });
+            }
+          });
+        });
+        reg.update().catch(() => {});
+      })
+      .catch((e) => console.warn('SW failed', e));
   }
 
   // Handy in the console: __today.store.state

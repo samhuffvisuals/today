@@ -142,6 +142,8 @@ label.hap {
   inset: 0;
   z-index: 1;
   border-radius: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -150,11 +152,10 @@ label.hap > input {
   left: 0; top: 0;
   width: 1px; height: 1px;
   margin: 0;
-  opacity: 0;
-  pointer-events: none;
-  clip-path: inset(50%);
+  visibility: hidden;
 }
 .no-haptics label.hap { display: none; }
+.diag { display: block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .htest-n { font-size: 15px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
 
 /* ============ Header ============ */

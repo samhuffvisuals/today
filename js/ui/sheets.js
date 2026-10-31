@@ -1,6 +1,6 @@
 // Bottom sheets: quick add, edit task, category editor, settings.
 import { store, PALETTE, MAX_CATEGORIES, MAX_PACKS, exportData, importData, eraseAll } from '../store.js';
-import { haptic, setHapticsEnabled, overlayHaptics } from '../haptics.js';
+import { haptic, setHapticsEnabled, overlayHaptics, stats as hapticStats } from '../haptics.js';
 import { addTask, editTask, deleteTask, saveCategory, deleteCategory, savePack, deletePack } from '../actions.js';
 import { colorOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
 import { openHistory } from './history.js';
@@ -501,9 +501,7 @@ export function openSettings() {
       <div class="set-group">
         <button class="set-row" type="button" data-act="htest"><span class="label">Tap here to test</span><span class="htest-n" aria-live="polite"></span></button>
       </div>
-      <p class="hint">${overlayHaptics
-        ? 'Every tap in the app plays the system switch haptic. If this button is silent, check Settings → Sounds &amp; Haptics → System Haptics on your iPhone.'
-        : 'This device uses vibration patterns where the browser supports them.'}</p>
+      <p class="hint" data-role="hdiag"></p>
 
       <h3>Packs</h3>
       <div class="set-group" data-role="packs"></div>
@@ -525,7 +523,7 @@ export function openSettings() {
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v2.0 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · v3.1 · Everything stays on this device.</p>`,
   });
 
   const paintToggles = () =>
@@ -587,9 +585,20 @@ export function openSettings() {
   );
 
   let taps = 0;
+  const paintDiag = () => {
+    const m = navigator.userAgent.match(/OS (\d+)[._](\d+)/);
+    const ios = m ? `iOS ${m[1]}.${m[2]}` : 'not iOS';
+    const mode = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone ? 'home screen app' : 'Safari tab';
+    sheet.$('[data-role=hdiag]').innerHTML = overlayHaptics
+      ? `Every real tap plays the iPhone's switch haptic. Silent? Check iPhone Settings → Sounds &amp; Haptics → <b>System Haptics</b>.<br>
+         <span class="diag">${ios} · ${mode} · overlays ${document.querySelectorAll('label.hap').length} · taps ${hapticStats.taps} · forwarded ${hapticStats.forwarded}</span>`
+      : `Haptic overlays are off on this device (${ios}). Android uses vibration patterns where supported.`;
+  };
+  paintDiag();
   sheet.$('[data-act=htest]').addEventListener('click', () => {
     haptic('tap');
     sheet.$('.htest-n').textContent = `${++taps} ${taps === 1 ? 'tap' : 'taps'}`;
+    setTimeout(paintDiag, 50);
   });
 
   sheet.$('[data-role=cats]').addEventListener('click', (e) => {

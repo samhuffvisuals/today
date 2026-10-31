@@ -48,19 +48,12 @@ export function haptic(name) {
 
 /* ---------- iOS overlays ---------- */
 
-let lastFocus = null;
+// Diagnostics for Settings: real taps on overlays, and trusted clicks forwarded to a switch.
+export const stats = { taps: 0, forwarded: 0 };
 
 function onSwitchClick(e) {
+  if (e.isTrusted) stats.forwarded++;
   e.stopPropagation(); // the control already handled the real click
-}
-
-// If the forwarded click moves focus to the hidden switch, give it straight back
-// (e.g. the FAB opens quick add and focuses its text field; keep the keyboard up).
-function onSwitchFocus() {
-  const prev = lastFocus;
-  if (prev && prev.isConnected && prev !== this && /^(INPUT|TEXTAREA)$/.test(prev.tagName)) {
-    prev.focus({ preventScroll: true });
-  } else this.blur();
 }
 
 function attach(host) {
@@ -69,12 +62,13 @@ function attach(host) {
   const l = document.createElement('label');
   l.className = 'hap';
   l.setAttribute('aria-hidden', 'true');
+  // The switch must never sit under the finger: WebKit marks a touchstart on a
+  // switch as handled, which cancels scrolling. visibility:hidden keeps it out
+  // of hit testing while it still has a renderer, which the haptic needs.
   const sw = document.createElement('input');
   sw.type = 'checkbox';
   sw.setAttribute('switch', '');
-  sw.tabIndex = -1;
   sw.addEventListener('click', onSwitchClick);
-  sw.addEventListener('focus', onSwitchFocus);
   l.appendChild(sw);
   host.appendChild(l);
 }
@@ -92,8 +86,7 @@ export function installHaptics(root = document.body) {
   new MutationObserver((muts) => {
     for (const m of muts) m.addedNodes.forEach(scan);
   }).observe(root, { childList: true, subtree: true });
-
-  document.addEventListener('focusin', (e) => {
-    if (!e.target.closest('label.hap')) lastFocus = e.target;
-  });
+  document.addEventListener('click', (e) => {
+    if (e.isTrusted && e.target.matches?.('label.hap')) stats.taps++;
+  }, true);
 }
