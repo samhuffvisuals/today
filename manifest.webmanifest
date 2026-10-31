@@ -1,7 +1,7 @@
 {
   "name": "Today",
   "short_name": "Today",
-  "description": "A daily task list that resets every morning.",
+  "description": "Today, one tap at a time. A daily list that resets every morning.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,9 +1,8 @@
-// State changes + the feedback (haptics, sound, effects) that goes with them.
+// State changes + the feedback (haptics, effects) that goes with them.
 // Each one is called synchronously from a gesture handler so haptics can fire.
-import { store, uid, MAX_CATEGORIES } from './store.js';
-import { stats, streak } from './rollover.js';
+import { store, uid, MAX_CATEGORIES, MAX_PACKS } from './store.js';
+import { stats, tasksFor } from './rollover.js';
 import { haptic } from './haptics.js';
-import { play } from './sound.js';
 import { renderHeader, renderList, render, taskEl, colorOf, catOf } from './ui/render.js';
 import { burst, celebrate } from './ui/effects.js';
 import { toast } from './ui/toast.js';
@@ -27,13 +26,7 @@ export function toggleTask(id) {
 
   const st = stats(s);
   const allDone = !was && st.total > 0 && st.done === st.total;
-  if (was) {
-    haptic('tap');
-    play('tick');
-  } else {
-    haptic(allDone ? 'celebrate' : 'success');
-    play(allDone ? 'chime' : 'pop');
-  }
+  haptic(was ? 'tap' : allDone ? 'celebrate' : 'success');
 
   const li = taskEl(id);
   if (li) {
@@ -48,13 +41,16 @@ export function toggleTask(id) {
   }
   renderHeader();
   queueReorder();
-  if (allDone) setTimeout(() => celebrate(streak(s)), 420);
+  if (allDone) setTimeout(() => celebrate(), 380);
+}
+
+function nextOrder(s) {
+  return s.tasks.reduce((m, t) => Math.max(m, t.order || 0), 0) + 1;
 }
 
 export function addTask(text, { catId, type, days }) {
   const s = store.state;
-  const order = s.tasks.reduce((m, t) => Math.max(m, t.order || 0), 0) + 1;
-  const t = { id: uid(), text, catId, type, order };
+  const t = { id: uid(), text, catId, type, order: nextOrder(s) };
   if (type === 'daily') {
     t.days = days && days.length && days.length < 7 ? [...days] : null;
     t.since = s.day.key;
@@ -66,10 +62,36 @@ export function addTask(text, { catId, type, days }) {
   s.settings.lastType = type;
   store.save();
   haptic('tap');
-  play('add');
   renderHeader();
   renderList({ animate: true });
   return t;
+}
+
+// Drops every item of a pack onto today (skipping ones already on the list). Returns how many were added.
+export function addPack(packId) {
+  const s = store.state;
+  const p = s.packs.find((x) => x.id === packId);
+  if (!p) return 0;
+  const onList = new Set(tasksFor(s, s.day.key).map((t) => t.text.trim().toLowerCase()));
+  let order = nextOrder(s);
+  let n = 0;
+  for (const text of p.items) {
+    if (onList.has(text.toLowerCase())) continue;
+    s.tasks.push({ id: uid(), text, catId: p.catId, type: 'today', order: order++, dayKey: s.day.key });
+    onList.add(text.toLowerCase());
+    n++;
+  }
+  if (!n) {
+    haptic('snap');
+    toast(`${p.emoji} ${p.name} is already on today`);
+    return 0;
+  }
+  delete s.settings.collapsed[p.catId];
+  store.save();
+  haptic('success');
+  render({ animate: true });
+  toast(`${p.emoji} Added ${n} ${n === 1 ? 'task' : 'tasks'}`);
+  return n;
 }
 
 export function editTask(id, { text, catId, type, days }) {
@@ -100,7 +122,6 @@ export function deleteTask(id) {
   const doneAt = s.day.done[id];
   delete s.day.done[id];
   store.save();
-  play('delete');
   render({ animate: true });
 
   const label = task.text.length > 24 ? task.text.slice(0, 23) + '…' : task.text;
@@ -112,7 +133,6 @@ export function deleteTask(id) {
       if (doneAt) st.day.done[id] = doneAt;
       store.save();
       haptic('tap');
-      play('add');
       render({ animate: true });
     },
   });
@@ -137,7 +157,6 @@ export function carryTasks() {
   s.carry = null;
   store.save();
   haptic('success');
-  play('pop');
   render({ animate: true });
 }
 
@@ -158,7 +177,6 @@ export function toggleCollapse(catId) {
   else c[catId] = true;
   store.save();
   haptic('tap');
-  play('tick');
   renderList();
 }
 
@@ -182,10 +200,33 @@ export function deleteCategory(id) {
   if (id === 'general') return;
   s.categories = s.categories.filter((c) => c.id !== id);
   for (const t of s.tasks) if (t.catId === id) t.catId = 'general';
+  for (const p of s.packs) if (p.catId === id) p.catId = 'general';
   delete s.settings.collapsed[id];
   if (s.settings.lastCat === id) s.settings.lastCat = 'general';
   store.save();
   haptic('tap');
-  play('delete');
   render({ animate: true });
+}
+
+export function savePack({ id, name, emoji, catId, items }) {
+  const s = store.state;
+  let p = id && s.packs.find((x) => x.id === id);
+  if (p) Object.assign(p, { name, emoji, catId, items: [...items] });
+  else {
+    if (s.packs.length >= MAX_PACKS) return null;
+    p = { id: uid(), name, emoji, catId, items: [...items] };
+    s.packs.push(p);
+  }
+  store.save();
+  haptic('success');
+  render();
+  return p;
+}
+
+export function deletePack(id) {
+  const s = store.state;
+  s.packs = s.packs.filter((p) => p.id !== id);
+  store.save();
+  haptic('tap');
+  render();
 }

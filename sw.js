@@ -1,6 +1,6 @@
 // Offline-first service worker.
 // Bump VERSION whenever you deploy changed files so phones pick up the update.
-const VERSION = 'today-v1';
+const VERSION = 'today-v2';
 
 const ASSETS = [
   './',
@@ -11,10 +11,8 @@ const ASSETS = [
   './js/store.js',
   './js/rollover.js',
   './js/haptics.js',
-  './js/sound.js',
   './js/actions.js',
   './js/ui/icons.js',
-  './js/ui/theme.js',
   './js/ui/render.js',
   './js/ui/gestures.js',
   './js/ui/sheets.js',

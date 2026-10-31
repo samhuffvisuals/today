@@ -1,6 +1,6 @@
 # Today
 
-A daily task list that resets every morning. It's a static PWA: plain HTML, CSS and JavaScript modules, with no build step, no backend and no accounts. Everything is stored on your phone, in `localStorage`.
+A daily task list that resets every morning. Open it and the day is already there: your daily tasks are waiting, one tap drops a whole **pack** of tasks (like every step of a new shoot) onto today, the screen shifts from red to green as you check things off, and finishing the day fills the whole phone. It's a static PWA: plain HTML, CSS and JavaScript modules, with no build step, no backend and no accounts. Everything is stored on your phone, in `localStorage`.
 
 ## Run it locally
 
@@ -62,16 +62,15 @@ Home-screen apps keep their data separate from Safari and aren't subject to Safa
 
 | File | What it does |
 |---|---|
-| `js/store.js` | Load/save the single JSON state blob, export/import, the color palette |
-| `js/rollover.js` | "Day starts at" logic, history snapshots, carry-over, streaks (pure functions) |
+| `js/store.js` | Load/save the single JSON state blob, export/import, the color palette, the first-run starter set (categories, daily tasks, packs) |
+| `js/rollover.js` | "Day starts at" logic, history snapshots, carry-over, the days-done counter (pure functions) |
 | `js/haptics.js` | `haptic('tap' \| 'success' \| 'snap' \| 'lift' \| 'drop' \| 'celebrate')` |
-| `js/sound.js` | Synthesized Web Audio clicks and pops (off by default) |
-| `js/actions.js` | Every state change plus the feedback that goes with it |
-| `js/ui/render.js` | Header, progress ring, keyed list rendering with FLIP animations |
+| `js/actions.js` | Every state change plus the feedback that goes with it, including adding a pack |
+| `js/ui/render.js` | Header, the day color (red → green), the mood line, pack chips, progress ring, keyed list rendering with FLIP animations |
 | `js/ui/gestures.js` | Swipe to complete/delete, long-press drag to reorder, long-press header |
-| `js/ui/sheets.js` | Bottom sheets: quick add, edit task, category editor, settings |
-| `js/ui/history.js` | 30-day grid |
-| `js/ui/effects.js` | Particle burst, confetti, the "Done." overlay |
+| `js/ui/sheets.js` | Bottom sheets: quick add, edit task, category editor, pack editor, settings |
+| `js/ui/history.js` | "Your days": a five-week calendar of wins |
+| `js/ui/effects.js` | Particle burst, confetti, the full-screen DONE finish |
 | `js/ui/toast.js` | Undo toast |
 
 **The daily reset.** A PWA can't run in the background, so the app checks the date whenever it opens, comes back to the foreground, or every 30 s while it's open. If the logical day has changed, it:
@@ -83,7 +82,11 @@ Home-screen apps keep their data separate from Safari and aren't subject to Safa
 
 With the default 4:00 AM start, 1:30 AM still counts as yesterday.
 
-**Streak.** The streak counts consecutive days at 100%. Days with nothing scheduled are skipped. An unfinished today doesn't break the streak until the day rolls over.
+**Packs.** A pack is a named list of tasks (`New shoot`, `Clean house`, `Trip`). Tapping its chip adds every item to today as one-off tasks, skipping any that are already on the list. Edit packs in **Settings → Packs**.
+
+**Days done.** The counter at the top only ever goes up: it's the number of days you finished everything. A missed day adds nothing and takes nothing away, and the history calendar only shows the days you made progress. There is no streak on purpose.
+
+**Day color.** The accent color moves from red (nothing done) through orange and yellow to green (100%). It's a registered CSS custom property (`--accent`) so it animates, and it tints the glow at the top, the ring and the mood line.
 
 ## Haptics on iOS
 

@@ -1,5 +1,7 @@
 // Visual effects: spring easing, particle bursts, confetti, the "Done." overlay.
-import { PALETTE } from '../store.js';
+import { PALETTE, store } from '../store.js';
+import { tasksFor, daysDone, keyToDate } from '../rollover.js';
+import { esc, ICON } from './icons.js';
 
 export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -42,14 +44,28 @@ export function burst(x, y, color) {
 let celTimer = 0;
 let confettiRaf = 0;
 
-export function celebrate(streakN) {
+// The full-screen finish: the day color floods the screen, every finished task
+// ticks in one after another, then the all-time days-done count.
+export function celebrate() {
+  const s = store.state;
   const el = document.getElementById('celebrate');
-  el.querySelector('.cel-sub').textContent =
-    streakN > 1 ? `🔥 ${streakN}-day streak` : streakN === 1 ? '🔥 Streak started' : 'Every task, done.';
+  const done = tasksFor(s, s.day.key).filter((t) => s.day.done[t.id]);
+  const d = keyToDate(s.day.key);
+  const n = daysDone(s);
+
+  el.querySelector('.cel-sub').textContent = `${done.length} ${done.length === 1 ? 'task' : 'tasks'} · ${d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`;
+  el.querySelector('.cel-list').innerHTML = done
+    .slice(0, 7)
+    .map((t, i) => `<li style="--i:${i}"><i>${ICON.check}</i><span>${esc(t.text)}</span></li>`)
+    .join('') + (done.length > 7 ? `<li style="--i:7"><span class="more">+${done.length - 7} more</span></li>` : '');
+  el.querySelector('.cel-stat').innerHTML = `<b>${n}</b> ${n === 1 ? 'day' : 'days'} done`;
+
+  el.classList.remove('show');
+  void el.offsetWidth;
   el.classList.add('show');
   el.onclick = dismissCelebrate;
   clearTimeout(celTimer);
-  celTimer = setTimeout(dismissCelebrate, 2300);
+  celTimer = setTimeout(dismissCelebrate, 9000);
   if (!reduceMotion()) confetti();
 }
 
@@ -70,7 +86,7 @@ function confetti() {
   const ctx = cv.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const colors = PALETTE.map((p) => p.hex);
+  const colors = ['#ffffff', '#000000', '#ffffff', ...PALETTE.map((p) => p.hex)];
   const parts = [];
   for (let i = 0; i < 160; i++) {
     const left = i % 2 === 0;

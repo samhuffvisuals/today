@@ -1,14 +1,12 @@
 // Entry point: boot, day rollover triggers, and top-level wiring.
-import { store } from './store.js';
+import { store, seed } from './store.js';
 import { rollover } from './rollover.js';
 import { haptic, setHapticsEnabled } from './haptics.js';
-import { setSoundEnabled } from './sound.js';
-import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry } from './actions.js';
+import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry, addPack } from './actions.js';
 import { render } from './ui/render.js';
 import { initGestures } from './ui/gestures.js';
 import { openQuickAdd, openEdit, openSettings, openCategory } from './ui/sheets.js';
 import { openHistory } from './ui/history.js';
-import { applyTheme } from './ui/theme.js';
 import { ICON } from './ui/icons.js';
 
 const $ = (s) => document.querySelector(s);
@@ -22,14 +20,14 @@ function checkDay() {
 
 function boot() {
   const s = store.state;
-  applyTheme(s.settings.theme);
   setHapticsEnabled(s.settings.haptics);
-  setSoundEnabled(s.settings.sound);
 
   $('#gear').innerHTML = ICON.gear;
   $('#fab').innerHTML = ICON.plus;
+  $('#days-icon').innerHTML = ICON.star;
 
   rollover(s);
+  seed(s, s.day.key);
   store.save();
   render();
 
@@ -55,6 +53,11 @@ function boot() {
     if (head) toggleCollapse(head.closest('.group').dataset.cat);
   });
 
+  $('#packs').addEventListener('click', (e) => {
+    const b = e.target.closest('.pack');
+    if (b) addPack(b.dataset.id);
+  });
+
   $('#carry').addEventListener('click', (e) => {
     if (e.target.closest('.carry-yes')) carryTasks();
     else if (e.target.closest('.carry-no')) dismissCarry();
@@ -68,7 +71,7 @@ function boot() {
     haptic('tap');
     openSettings();
   });
-  $('#streak').addEventListener('click', () => {
+  $('#days').addEventListener('click', () => {
     haptic('tap');
     openHistory();
   });

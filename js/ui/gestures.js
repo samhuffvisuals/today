@@ -5,7 +5,6 @@
 // Touch events are used directly (not pointer events) because iOS needs a
 // non-passive touchmove to stop scrolling once a swipe or drag starts.
 import { haptic } from '../haptics.js';
-import { play } from '../sound.js';
 
 const SLOP = 8;
 const LIFT_MS = 380;
@@ -141,7 +140,6 @@ export function initGestures(root, scroller, cb) {
       if (armed) {
         g.li.dataset.armed = '';
         haptic('snap'); // usually silent on iOS (touchmove isn't a user gesture)
-        play('tick');
       } else delete g.li.dataset.armed;
     }
   }
@@ -202,7 +200,6 @@ export function initGestures(root, scroller, cb) {
       if (g && g.li === li) li.style.transition = 'none';
     }, 200);
     haptic('lift'); // usually silent on iOS (fires from a timer)
-    play('tick');
     const loop = () => {
       if (!g || g.mode !== 'drag') return;
       const zone = 110;
@@ -255,7 +252,6 @@ export function initGestures(root, scroller, cb) {
     li.classList.remove('lifted');
     li.parentElement?.classList.remove('reordering');
     haptic('drop'); // fires: we're inside touchend
-    play('tick');
     const ids = items.map((el) => el.dataset.id);
     const [moved] = ids.splice(idx, 1);
     ids.splice(target, 0, moved);

@@ -1,10 +1,8 @@
 // Bottom sheets: quick add, edit task, category editor, settings.
-import { store, PALETTE, MAX_CATEGORIES, exportData, importData, eraseAll } from '../store.js';
+import { store, PALETTE, MAX_CATEGORIES, MAX_PACKS, exportData, importData, eraseAll } from '../store.js';
 import { haptic, HAPTIC_NAMES, setHapticsEnabled } from '../haptics.js';
-import { play, setSoundEnabled } from '../sound.js';
-import { addTask, editTask, deleteTask, saveCategory, deleteCategory } from '../actions.js';
+import { addTask, editTask, deleteTask, saveCategory, deleteCategory, savePack, deletePack } from '../actions.js';
 import { colorOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
-import { applyTheme } from './theme.js';
 import { openHistory } from './history.js';
 import { toast } from './toast.js';
 import { ICON, esc } from './icons.js';
@@ -94,7 +92,7 @@ function taskControls(init) {
       <button type="button" data-v="today">Today only</button>
       <button type="button" data-v="daily">${ICON.repeat}<span>Daily</span></button>
     </div>
-    <div class="days" data-role="days">
+    <div class="days-pick" data-role="days">
       ${DAY_ORDER.map((d) => `<button type="button" data-d="${d}" aria-label="${DAY_NAME[d]}">${DAY_SHORT[d]}</button>`).join('')}
     </div>
     <div class="chips" data-role="chips"></div>`;
@@ -129,7 +127,6 @@ function taskControls(init) {
       if (!b || b.dataset.v === st.type) return;
       st.type = b.dataset.v;
       haptic('tap');
-      play('tick');
       paint();
       onNewCategory?.refocus?.();
     });
@@ -162,7 +159,6 @@ function taskControls(init) {
       }
       st.catId = b.dataset.cat;
       haptic('tap');
-      play('tick');
       paintChips();
       onNewCategory?.refocus?.();
     });
@@ -262,7 +258,7 @@ export function openEdit(id) {
 
 /* ---------- category editor ---------- */
 
-const EMOJI = ['✅', '🏠', '💼', '💪', '🧘', '📚', '🎨', '🛒', '💰', '🍎', '💊', '🧹', '🐶', '🌱', '✈️', '🎮', '❤️', '⭐', '🔥', '🎯', '💡', '🎵', '☕', '👶'];
+const EMOJI = ['✅', '🎬', '🏠', '🧹', '✈️', '🐶', '💪', '📦', '💼', '🎨', '🛒', '💰', '🍎', '💊', '🌱', '🎮', '❤️', '⭐', '🔥', '🎯', '💡', '🎵', '☕', '📚'];
 
 const firstGrapheme = (str) => {
   if (!str) return '';
@@ -352,7 +348,6 @@ export function openCategory(id, { onSave } = {}) {
     if (!b) return;
     color = b.dataset.color;
     haptic('tap');
-    play('tick');
     paint();
   });
 
@@ -377,6 +372,102 @@ export function openCategory(id, { onSave } = {}) {
   });
 }
 
+/* ---------- pack editor ---------- */
+
+export function openPack(id, { onSave } = {}) {
+  const s = store.state;
+  const p = id ? s.packs.find((x) => x.id === id) : null;
+  if (!p && s.packs.length >= MAX_PACKS) {
+    toast(`You can have up to ${MAX_PACKS} packs`);
+    return;
+  }
+  let emoji = p?.emoji || '📦';
+  let catId = p && s.categories.some((c) => c.id === p.catId) ? p.catId : 'general';
+
+  const sheet = openSheet({
+    title: p ? 'Edit pack' : 'New pack',
+    className: 'pack-sheet',
+    content: `
+      <div class="cat-row">
+        <input class="field emoji-field" type="text" value="${esc(emoji)}" aria-label="Emoji" autocomplete="off">
+        <input class="field name-field" type="text" value="${esc(p?.name || '')}" placeholder="Pack name" maxlength="24" enterkeyhint="next" aria-label="Pack name" autocapitalize="words">
+      </div>
+      <div class="emoji-pick">${EMOJI.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
+      <h3>Tasks, one per line</h3>
+      <textarea class="field items-field" rows="6" placeholder="Download footage&#10;Sort footage&#10;Find song" aria-label="Tasks">${esc((p?.items || []).join('\n'))}</textarea>
+      <h3>Category</h3>
+      <div class="chips" data-role="chips"></div>
+      <button class="btn" type="button" data-save>${p ? 'Save' : 'Create pack'}</button>
+      ${p ? `<button class="btn danger" type="button" data-del>Delete pack</button>` : ''}`,
+  });
+
+  const emojiInput = sheet.$('.emoji-field');
+  const nameInput = sheet.$('.name-field');
+  const itemsInput = sheet.$('.items-field');
+  const paint = () => {
+    sheet.$$('.emoji-pick button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.e === emoji)));
+    sheet.$('[data-role=chips]').innerHTML = s.categories
+      .map(
+        (c) => `<button type="button" class="chip" data-cat="${c.id}" style="--c:${colorOf(c.color)}" aria-pressed="${c.id === catId}">
+          <span>${esc(c.emoji)}</span>${esc(c.name)}</button>`
+      )
+      .join('');
+    sheet.panel.style.setProperty('--c', colorOf((s.categories.find((c) => c.id === catId) || s.categories[0]).color));
+  };
+  paint();
+  if (!p) nameInput.focus({ preventScroll: true });
+
+  emojiInput.addEventListener('input', () => {
+    const g = firstGrapheme(emojiInput.value.trim());
+    if (g) {
+      emoji = g;
+      emojiInput.value = g;
+      paint();
+    }
+  });
+  emojiInput.addEventListener('focus', () => emojiInput.select());
+  sheet.$('.emoji-pick').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    emoji = b.dataset.e;
+    emojiInput.value = emoji;
+    haptic('tap');
+    paint();
+  });
+  sheet.$('[data-role=chips]').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    catId = b.dataset.cat;
+    haptic('tap');
+    paint();
+  });
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      itemsInput.focus();
+    }
+  });
+
+  sheet.$('[data-save]').addEventListener('click', () => {
+    const name = nameInput.value.trim() || 'Untitled';
+    const items = itemsInput.value.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 30);
+    if (!items.length) {
+      haptic('snap');
+      itemsInput.focus();
+      return;
+    }
+    const saved = savePack({ id: p?.id, name, emoji, catId, items });
+    sheet.close();
+    if (saved) onSave?.(saved);
+  });
+  const del = sheet.$('[data-del]');
+  if (del) confirmTap(del, 'Tap again to delete', () => {
+    deletePack(p.id);
+    sheet.close();
+    onSave?.(null);
+  });
+}
+
 /* ---------- settings ---------- */
 
 const toMinutes = (v) => {
@@ -391,13 +482,6 @@ export function openSettings() {
     title: 'Settings',
     className: 'settings-sheet',
     content: `
-      <h3>Appearance</h3>
-      <div class="seg" data-role="theme">
-        <button type="button" data-v="dark">Dark</button>
-        <button type="button" data-v="light">Light</button>
-        <button type="button" data-v="system">Auto</button>
-      </div>
-
       <h3>Day</h3>
       <div class="set-group">
         <label class="set-row"><span class="label">New day starts at</span>
@@ -409,7 +493,6 @@ export function openSettings() {
       <h3>Feel</h3>
       <div class="set-group">
         <button class="set-row" type="button" data-toggle="haptics"><span class="label">Haptics</span><span class="toggle" role="switch"></span></button>
-        <button class="set-row" type="button" data-toggle="sound"><span class="label">Sounds</span><span class="toggle" role="switch"></span></button>
       </div>
       <details class="htest">
         <summary>Haptics test</summary>
@@ -417,13 +500,17 @@ export function openSettings() {
         <p class="hint">On iPhone (iOS 18+) every button here gives at least one tick, because you're tapping. Count the ticks on <b>success</b> and <b>celebrate</b> to see whether the extra ones fire. In normal use, <b>snap</b> (mid-swipe) and <b>lift</b> (long-press) are triggered without a tap, and iOS usually blocks them.</p>
       </details>
 
+      <h3>Packs</h3>
+      <div class="set-group" data-role="packs"></div>
+      <p class="hint">A pack drops a whole set of tasks onto today in one tap.</p>
+
       <h3>Categories</h3>
       <div class="set-group" data-role="cats"></div>
       <p class="hint">Tip: long-press a category header in the list to edit it.</p>
 
       <h3>History</h3>
       <div class="set-group">
-        <button class="set-row" type="button" data-act="history"><span class="label">30-day history</span>${ICON.right}</button>
+        <button class="set-row" type="button" data-act="history"><span class="label">Your days</span>${ICON.right}</button>
       </div>
 
       <h3>Backup</h3>
@@ -433,11 +520,9 @@ export function openSettings() {
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v1.0 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · v2.0 · Everything stays on this device.</p>`,
   });
 
-  const paintTheme = () =>
-    sheet.$$('[data-role=theme] button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === s.settings.theme)));
   const paintToggles = () =>
     sheet.$$('[data-toggle]').forEach((b) => b.querySelector('.toggle').setAttribute('aria-checked', String(!!s.settings[b.dataset.toggle])));
   const paintCats = () => {
@@ -454,18 +539,28 @@ export function openSettings() {
         ? `<button class="set-row add-row" type="button" data-cat-new>${ICON.plus}<span class="label">New category</span></button>`
         : `<div class="set-row muted"><span class="label">Maximum of ${MAX_CATEGORIES} categories</span></div>`);
   };
-  paintTheme();
+  const paintPacks = () => {
+    const box = sheet.$('[data-role=packs]');
+    box.innerHTML =
+      s.packs
+        .map(
+          (p) => `<button class="set-row" type="button" data-pack="${p.id}">
+            <span class="cat-emoji">${esc(p.emoji)}</span>
+            <span class="label">${esc(p.name)}<small>${p.items.length} ${p.items.length === 1 ? 'task' : 'tasks'}</small></span>${ICON.right}</button>`
+        )
+        .join('') +
+      (s.packs.length < MAX_PACKS
+        ? `<button class="set-row add-row" type="button" data-pack-new>${ICON.plus}<span class="label">New pack</span></button>`
+        : `<div class="set-row muted"><span class="label">Maximum of ${MAX_PACKS} packs</span></div>`);
+  };
   paintToggles();
   paintCats();
+  paintPacks();
 
-  sheet.$('[data-role=theme]').addEventListener('click', (e) => {
+  sheet.$('[data-role=packs]').addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
-    s.settings.theme = b.dataset.v;
-    store.save();
-    applyTheme(s.settings.theme);
-    haptic('tap');
-    paintTheme();
+    openPack(b.hasAttribute('data-pack-new') ? null : b.dataset.pack, { onSave: paintPacks });
   });
 
   sheet.$('[data-role=daystart]').addEventListener('change', (e) => {
@@ -481,9 +576,7 @@ export function openSettings() {
       s.settings[k] = !s.settings[k];
       store.save();
       if (k === 'haptics') setHapticsEnabled(s.settings.haptics);
-      if (k === 'sound') setSoundEnabled(s.settings.sound);
       haptic('tap');
-      play('pop');
       paintToggles();
     })
   );

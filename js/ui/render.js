@@ -2,7 +2,7 @@
 // Elements are keyed and reused so CSS transitions keep running, and moves
 // are animated with FLIP (transforms only).
 import { store, PALETTE } from '../store.js';
-import { tasksFor, stats, streak, keyToDate, addDays } from '../rollover.js';
+import { tasksFor, stats, daysDone, keyToDate, addDays } from '../rollover.js';
 import { SPRING, reduceMotion } from './effects.js';
 import { ICON, esc } from './icons.js';
 
@@ -48,31 +48,85 @@ function tweenPct(target) {
   pctRaf = requestAnimationFrame(step);
 }
 
+/* The day color: red with nothing done, through orange and yellow, to green at 100%. */
+export function dayColor(pct) {
+  const k = Math.max(0, Math.min(1, pct / 100));
+  const hue = 4 + k * 128; // 4 = red, 132 = green
+  const sat = 92 + k * 4;
+  const light = 58 - k * 4;
+  return `hsl(${hue.toFixed(1)} ${sat.toFixed(0)}% ${light.toFixed(0)}%)`;
+}
+
+const MOOD = [
+  [0, "Let's go."],
+  [1, 'Started.'],
+  [25, 'Rolling.'],
+  [50, 'Halfway there.'],
+  [75, 'Almost there.'],
+  [100, 'All done.'],
+];
+const moodFor = (pct, total) => {
+  if (!total) return 'Nothing on today.';
+  let m = MOOD[0][1];
+  for (const [at, text] of MOOD) if (pct >= at) m = text;
+  return m;
+};
+
 export function renderHeader() {
   const s = store.state;
   const d = keyToDate(s.day.key);
   $('#weekday').textContent = d.toLocaleDateString(undefined, { weekday: 'long' });
-  $('#monthday').textContent = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  $('#monthday').textContent = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 
   const { done, total } = stats(s);
   const pct = total ? Math.round((done / total) * 100) : 0;
+  const full = total > 0 && done === total;
+  document.documentElement.style.setProperty('--accent', dayColor(pct));
+  document.documentElement.classList.toggle('day-full', full);
+  document.documentElement.classList.toggle('day-empty', !total);
+
   const bar = $('#ring-bar');
   bar.style.strokeDashoffset = String(100 - pct);
   bar.style.opacity = pct ? '1' : '0';
-  $('#ring').classList.toggle('full', total > 0 && done === total);
+  $('#ring').classList.toggle('full', full);
   $('#ring').setAttribute('aria-label', `${done} of ${total} done`);
-  $('#ring-sub').textContent = total ? `${done} of ${total}` : 'empty';
   tweenPct(pct);
 
-  const n = streak(s);
-  if (n > (s.bestStreak || 0)) {
-    s.bestStreak = n;
-    store.save();
+  const mood = $('#mood');
+  const text = moodFor(pct, total);
+  if (mood.textContent !== text) {
+    mood.textContent = text;
+    mood.classList.remove('bump');
+    void mood.offsetWidth;
+    mood.classList.add('bump');
   }
-  $('#streak-n').textContent = n;
-  $('#streak').classList.toggle('zero', n === 0);
 
+  const n = daysDone(s);
+  $('#days-n').textContent = n;
+  $('.days-word').textContent = n === 1 ? 'day' : 'days';
+  $('#days').classList.toggle('zero', n === 0);
+
+  renderPacks();
   updateGroupCounts();
+}
+
+/* ---------- packs ---------- */
+
+function renderPacks() {
+  const s = store.state;
+  const el = $('#packs');
+  const onList = new Set(tasksFor(s, s.day.key).map((t) => t.text.trim().toLowerCase()));
+  const html = s.packs
+    .map((p) => {
+      const left = p.items.filter((x) => !onList.has(x.toLowerCase())).length;
+      const c = catOf(p.catId);
+      return `<button type="button" class="pack${left ? '' : ' used'}" data-id="${p.id}" style="--c:${colorOf(c.color)}" aria-label="Add ${esc(p.name)}">
+        <span class="pack-emoji">${esc(p.emoji)}</span><span class="pack-name">${esc(p.name)}</span>
+        <span class="pack-n">${left ? `+${left}` : ICON.check}</span></button>`;
+    })
+    .join('');
+  if (el.innerHTML !== html) el.innerHTML = html;
+  el.hidden = !s.packs.length;
 }
 
 /* ---------- list ---------- */
@@ -258,8 +312,8 @@ function renderEmpty(visible) {
   el.dataset.kind = kind;
   el.innerHTML =
     kind === 'free'
-      ? `<div class="empty-emoji">🌤️</div><h2>Free day.</h2><p>Nothing scheduled today.<br>Tap <b>+</b> if something comes up.</p>`
-      : `<div class="empty-emoji">✨</div><h2>A fresh start.</h2><p>Tap <b>+</b> to add your first task.</p>`;
+      ? `<div class="empty-emoji">🌤️</div><h2>Free day.</h2><p>Nothing scheduled today.<br>Tap a pack above or <b>+</b> if something comes up.</p>`
+      : `<div class="empty-emoji">✨</div><h2>A fresh start.</h2><p>Tap a pack above or <b>+</b> to add your first task.</p>`;
 }
 
 function renderCarry() {

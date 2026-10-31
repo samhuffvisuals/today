@@ -75,25 +75,25 @@ export function rollover(state, now = new Date()) {
 
   state.day = { key, done: {} };
 
-  const cutoff = addDays(key, -120);
+  const cutoff = addDays(key, -400);
   for (const hk of Object.keys(state.history)) if (hk < cutoff) delete state.history[hk];
 
   return { changed: true };
 }
 
-// Consecutive days at 100%. Today counts once it's complete, but an unfinished
-// today doesn't break the streak. Days with nothing scheduled are skipped.
-export function streak(state) {
+// Days finished, all time. Only ever counts up: a missed day adds nothing and takes nothing away.
+export function daysDone(state) {
   let n = 0;
+  for (const h of Object.values(state.history)) if (h.t > 0 && h.d >= h.t) n++;
   const s = stats(state);
-  if (s.total > 0 && s.done === s.total) n = 1;
-  let k = addDays(state.day.key, -1);
-  for (let i = 0; i < 400; i++, k = addDays(k, -1)) {
-    const h = state.history[k];
-    if (!h) break;
-    if (h.t === 0) continue;
-    if (h.d >= h.t) n++;
-    else break;
-  }
+  if (s.total > 0 && s.done === s.total) n++;
+  return n;
+}
+
+// Tasks checked off over the last `days` days, today included.
+export function tasksDone(state, days = 30) {
+  let n = stats(state).done;
+  const from = addDays(state.day.key, -(days - 1));
+  for (const [k, h] of Object.entries(state.history)) if (k >= from && k < state.day.key) n += h.d;
   return n;
 }
