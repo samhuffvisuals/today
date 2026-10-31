@@ -512,7 +512,7 @@ export function openPack(id, { onSave } = {}) {
 
 /* ---------- settings ---------- */
 
-export const APP_VERSION = 'v3.8';
+export const APP_VERSION = 'v3.9';
 
 const toMinutes = (v) => {
   const [h, m] = v.split(':').map(Number);

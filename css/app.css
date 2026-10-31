@@ -321,8 +321,8 @@ label.hap > input {
 
 /* ============ Groups ============ */
 
-.group { margin-bottom: 22px; }
-.group.collapsed { margin-bottom: 10px; }
+.group { margin-bottom: 4px; }
+.group.collapsed { margin-bottom: 14px; }
 
 .group-head {
   width: 100%;
@@ -362,8 +362,8 @@ label.hap > input {
 .group.collapsed .chev { transform: rotate(-90deg); }
 
 .group-body {
-  margin: 0 -10px;
-  padding: 0 10px;
+  margin: 0 -24px;
+  padding: 0 24px;
   overflow: hidden;
 }
 .group-body[hidden] { display: none; }
@@ -400,7 +400,7 @@ label.hap > input {
 .tasks {
   list-style: none;
   margin: 0;
-  padding: 2px 0 8px;
+  padding: 2px 0 26px;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -441,13 +441,17 @@ label.hap > input {
   transition: background .3s, box-shadow .3s;
 }
 .task.done .task-fg {
-  background: color-mix(in srgb, var(--green) 9%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--green) 35%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--green) 30%, transparent), 0 0 22px color-mix(in srgb, var(--green) 22%, transparent);
+  background: color-mix(in srgb, var(--green) 22%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--green) 60%, transparent),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--green) 60%, transparent),
+    0 0 30px color-mix(in srgb, var(--green) 45%, transparent),
+    0 0 8px color-mix(in srgb, var(--green) 35%, transparent);
 }
 .task.pop .task-fg { animation: doneflash .9s var(--out); }
 @keyframes doneflash {
-  0% { box-shadow: inset 0 0 0 1px var(--green), 0 0 0 color-mix(in srgb, var(--green) 60%, transparent); background: color-mix(in srgb, var(--green) 28%, transparent); }
-  40% { box-shadow: inset 0 0 0 1.5px var(--green), 0 0 36px color-mix(in srgb, var(--green) 55%, transparent); }
+  0% { box-shadow: inset 0 0 0 2px var(--green), 0 0 0 color-mix(in srgb, var(--green) 70%, transparent); background: color-mix(in srgb, var(--green) 45%, transparent); }
+  40% { box-shadow: inset 0 0 0 2px var(--green), 0 0 48px color-mix(in srgb, var(--green) 75%, transparent), 0 0 12px var(--green); background: color-mix(in srgb, var(--green) 38%, transparent); }
 }
 .task-fg.springback { transition: transform .5s var(--spring); }
 .task-fg.flyout { transition: transform .24s var(--out); }
@@ -477,12 +481,13 @@ label.hap > input {
   stroke-linejoin: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset .3s var(--out) .1s;
+  visibility: hidden;
+  transition: stroke-dashoffset .3s var(--out) .1s, visibility 0s .1s;
 }
 .task.done .check-fill { transform: scale(1); }
 .task.done .check-fill, .task.done .check-ring { fill: var(--green); stroke: var(--green); }
 .task.done .check svg { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--green) 75%, transparent)); }
-.task.done .tick { stroke-dashoffset: 0; }
+.task.done .tick { stroke-dashoffset: 0; visibility: visible; }
 .task.pop .check svg { animation: pop .6s ease-out; }
 
 @keyframes pop {
@@ -508,8 +513,8 @@ label.hap > input {
   box-decoration-break: clone;
   transition: background-size .38s var(--out) .06s, color .3s;
 }
-.task.done .task-text { color: color-mix(in srgb, var(--green) 80%, #fff); background-image: linear-gradient(var(--green), var(--green)); background-size: 100% 2.5px; text-shadow: 0 0 14px color-mix(in srgb, var(--green) 55%, transparent); }
-.task.done .task-meta { color: color-mix(in srgb, var(--green) 55%, transparent); }
+.task.done .task-text { color: color-mix(in srgb, var(--green) 70%, #fff); background-image: linear-gradient(var(--green), var(--green)); background-size: 100% 2.5px; text-shadow: 0 0 16px color-mix(in srgb, var(--green) 70%, transparent); }
+.task.done .task-meta { color: color-mix(in srgb, var(--green) 75%, transparent); }
 
 .task-meta { display: block; margin-top: 3px; font-size: 13px; font-weight: 750; color: var(--text-3); }
 .task-meta:empty { display: none; }
