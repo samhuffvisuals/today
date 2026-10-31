@@ -1,7 +1,7 @@
 // Entry point: boot, day rollover triggers, and top-level wiring.
 import { store, seed } from './store.js';
 import { rollover } from './rollover.js';
-import { haptic, setHapticsEnabled } from './haptics.js';
+import { haptic, setHapticsEnabled, installHaptics } from './haptics.js';
 import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry, addPack } from './actions.js';
 import { render } from './ui/render.js';
 import { initGestures } from './ui/gestures.js';
@@ -25,6 +25,7 @@ function boot() {
   $('#gear').innerHTML = ICON.gear;
   $('#fab').innerHTML = ICON.plus;
   $('#days-icon').innerHTML = ICON.star;
+  installHaptics(); // after the icons: setting innerHTML would wipe the overlays
 
   rollover(s);
   seed(s, s.day.key);

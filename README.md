@@ -90,15 +90,16 @@ With the default 4:00 AM start, 1:30 AM still counts as yesterday.
 
 ## Haptics on iOS
 
-iOS Safari has no `navigator.vibrate`. Since iOS 18, toggling a `<input type="checkbox" switch>` plays a system haptic. The app does this through a hidden `<label>` and calls `label.click()` synchronously inside the gesture handler. WebKit only lets this fire during a real user activation (a tap, a finger-lift, a key press), so:
+iOS Safari has no `navigator.vibrate`. The one way to get a system haptic on the web is an `<input type="checkbox" switch>` being toggled by a **trusted** click. Since WebKit's May 2026 change (iOS 26.5 and later), toggling the switch from JavaScript with `label.click()` plays nothing, which is why the first version of this app was silent on a real phone.
 
-| Pattern | Triggered from | Expected on iPhone |
-|---|---|---|
-| tap | taps on checkboxes and buttons | fires |
-| drop | finger-lift after a drag | fires |
-| success | completing a task: tick + a second tick at 90 ms | first tick fires; the second may be dropped |
-| celebrate | last task: 4 ticks over 440 ms | first tick fires; later ticks may be dropped |
-| snap | crossing the swipe threshold mid-swipe | probably silent (touchmove isn't a user gesture) |
-| lift | long-press timer | probably silent (timers aren't user gestures) |
+So on iOS, `js/haptics.js` lays a transparent `<label>` over every button (and anything with `data-haptic`), with a hidden switch inside. Your finger lands on the label, WebKit forwards a trusted click to the switch, and iOS plays the switch haptic. The original click still bubbles to the button, so nothing else changes. A `MutationObserver` adds the overlay to anything rendered later.
 
-To check the multi-tick patterns on your phone, open **Settings → Haptics test**. Android uses real `navigator.vibrate` patterns. Other browsers fail silently.
+What to expect on an iPhone:
+
+| Action | Haptic |
+|---|---|
+| Tapping anything: checks, pack chips, the + button, sheet buttons, chips, toggles, calendar days | one system tick |
+| Swipe to complete or delete, long-press to reorder | silent (no click happens, and iOS only plays haptics for real taps) |
+| Finishing the day | the tick from the last check; tapping the DONE screen to dismiss ticks too |
+
+There is no way to make the tick stronger or play a pattern. If taps are silent, check **Settings → Sounds & Haptics → System Haptics** on the phone, and the **Haptics** toggle in the app's settings. Android uses `navigator.vibrate` patterns; other browsers are silent.

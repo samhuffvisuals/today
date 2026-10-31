@@ -125,7 +125,10 @@ function renderPacks() {
         <span class="pack-n">${left ? `+${left}` : ICON.check}</span></button>`;
     })
     .join('');
-  if (el.innerHTML !== html) el.innerHTML = html;
+  if (el.dataset.html !== html) {
+    el.dataset.html = html;
+    el.innerHTML = html;
+  }
   el.hidden = !s.packs.length;
 }
 
@@ -178,7 +181,7 @@ function createTask(id) {
           <path class="tick" pathLength="1" d="M10 16.6l4.1 4.1 8-8.4"/>
         </svg>
       </button>
-      <div class="task-body"><span class="task-text"></span><span class="task-meta"></span></div>
+      <div class="task-body" data-haptic><span class="task-text"></span><span class="task-meta"></span></div>
     </div>`;
   return li;
 }

@@ -1,6 +1,6 @@
 // Bottom sheets: quick add, edit task, category editor, settings.
 import { store, PALETTE, MAX_CATEGORIES, MAX_PACKS, exportData, importData, eraseAll } from '../store.js';
-import { haptic, HAPTIC_NAMES, setHapticsEnabled } from '../haptics.js';
+import { haptic, setHapticsEnabled, overlayHaptics } from '../haptics.js';
 import { addTask, editTask, deleteTask, saveCategory, deleteCategory, savePack, deletePack } from '../actions.js';
 import { colorOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
 import { openHistory } from './history.js';
@@ -182,7 +182,7 @@ export function openQuickAdd() {
       <form class="add-form" autocomplete="off">
         <input class="field add-input" type="text" placeholder="What needs doing?" maxlength="140"
                enterkeyhint="done" autocapitalize="sentences" autocomplete="off" aria-label="New task">
-        <button class="add-go" type="submit" aria-label="Add task">${ICON.up}</button>
+        <button class="add-go" type="button" aria-label="Add task">${ICON.up}</button>
       </form>
       ${ctl.html}
       <p class="add-note" aria-live="polite">Return adds and keeps this open.</p>`,
@@ -198,8 +198,7 @@ export function openQuickAdd() {
     if (e.target.closest('button') && !e.target.closest('[data-new]')) e.preventDefault();
   });
 
-  sheet.$('.add-form').addEventListener('submit', (e) => {
-    e.preventDefault();
+  const submit = () => {
     const text = input.value.trim();
     if (!text) {
       if (added) sheet.close(); // Return on an empty field closes after a run of adds
@@ -214,7 +213,12 @@ export function openQuickAdd() {
     note.classList.remove('bump');
     void note.offsetWidth;
     note.classList.add('bump');
+  };
+  sheet.$('.add-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    submit();
   });
+  sheet.$('.add-go').addEventListener('click', submit);
 }
 
 /* ---------- edit task ---------- */
@@ -494,11 +498,12 @@ export function openSettings() {
       <div class="set-group">
         <button class="set-row" type="button" data-toggle="haptics"><span class="label">Haptics</span><span class="toggle" role="switch"></span></button>
       </div>
-      <details class="htest">
-        <summary>Haptics test</summary>
-        <div class="hgrid">${HAPTIC_NAMES.map((n) => `<button type="button" data-h="${n}">${n}</button>`).join('')}</div>
-        <p class="hint">On iPhone (iOS 18+) every button here gives at least one tick, because you're tapping. Count the ticks on <b>success</b> and <b>celebrate</b> to see whether the extra ones fire. In normal use, <b>snap</b> (mid-swipe) and <b>lift</b> (long-press) are triggered without a tap, and iOS usually blocks them.</p>
-      </details>
+      <div class="set-group">
+        <button class="set-row" type="button" data-act="htest"><span class="label">Tap here to test</span><span class="htest-n" aria-live="polite"></span></button>
+      </div>
+      <p class="hint">${overlayHaptics
+        ? 'Every tap in the app plays the system switch haptic. If this button is silent, check Settings → Sounds &amp; Haptics → System Haptics on your iPhone.'
+        : 'This device uses vibration patterns where the browser supports them.'}</p>
 
       <h3>Packs</h3>
       <div class="set-group" data-role="packs"></div>
@@ -581,9 +586,10 @@ export function openSettings() {
     })
   );
 
-  sheet.$('.hgrid').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (b) haptic(b.dataset.h, { force: true });
+  let taps = 0;
+  sheet.$('[data-act=htest]').addEventListener('click', () => {
+    haptic('tap');
+    sheet.$('.htest-n').textContent = `${++taps} ${taps === 1 ? 'tap' : 'taps'}`;
   });
 
   sheet.$('[data-role=cats]').addEventListener('click', (e) => {
