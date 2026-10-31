@@ -1,5 +1,5 @@
 // Entry point: boot, day rollover triggers, and top-level wiring.
-import { store, seed } from './store.js';
+import { store, seed, remember } from './store.js';
 import { rollover } from './rollover.js';
 import { haptic, setHapticsEnabled, installHaptics } from './haptics.js';
 import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry, addPack } from './actions.js';
@@ -30,6 +30,11 @@ function boot() {
 
   rollover(s);
   seed(s, s.day.key);
+  // First run with suggestions: learn from what's already here.
+  if (!Object.keys(s.recent).length) {
+    for (const t of s.tasks) remember(s, t.text, t.catId, 0);
+    for (const p of s.packs) for (const text of p.items) remember(s, text, p.catId, 0);
+  }
   store.save();
   render();
 

@@ -1,8 +1,9 @@
 // Bottom sheets: quick add, edit task, category editor, settings.
-import { store, PALETTE, MAX_CATEGORIES, MAX_PACKS, exportData, importData, eraseAll } from '../store.js';
+import { store, PALETTE, MAX_CATEGORIES, MAX_PACKS, suggest, exportData, importData, eraseAll } from '../store.js';
 import { haptic, setHapticsEnabled, overlayHaptics, stats as hapticStats } from '../haptics.js';
 import { addTask, editTask, deleteTask, saveCategory, deleteCategory, savePack, deletePack } from '../actions.js';
-import { colorOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
+import { colorOf, catOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
+import { tasksFor } from '../rollover.js';
 import { openHistory } from './history.js';
 import { toast } from './toast.js';
 import { ICON, esc } from './icons.js';
@@ -187,6 +188,7 @@ export function openQuickAdd(preset = {}) {
                enterkeyhint="done" autocapitalize="sentences" autocomplete="off" aria-label="New task">
         <button class="add-go" type="button" aria-label="Add task">${ICON.up}</button>
       </form>
+      <div class="suggest" data-role="suggest" aria-label="Suggestions"></div>
       ${ctl.html}
       <p class="add-note" aria-live="polite">Return adds and keeps this open.</p>`,
   });
@@ -222,6 +224,38 @@ export function openQuickAdd(preset = {}) {
     submit();
   });
   sheet.$('.add-go').addEventListener('click', submit);
+
+  // Suggestions: most-used tasks when the field is empty, best matches while typing.
+  // A tap adds the task straight away, to the group it was last used in (or the
+  // preset group when the sheet was opened from an "Add to …" row).
+  const box = sheet.$('[data-role=suggest]');
+  const paintSuggest = () => {
+    const onList = new Set(tasksFor(s, s.day.key).map((t) => t.text.trim().toLowerCase().replace(/\s+/g, ' ')));
+    const list = suggest(s, input.value, onList);
+    box.innerHTML = list
+      .map((r) => {
+        const c = catOf(preset.catId || r.catId);
+        return `<button type="button" class="sug" data-text="${esc(r.text)}" data-cat="${c.id}" style="--c:${colorOf(c.color)}"><i></i>${esc(r.text)}</button>`;
+      })
+      .join('');
+    box.hidden = !list.length;
+  };
+  paintSuggest();
+  input.addEventListener('input', paintSuggest);
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('.sug');
+    if (!b) return;
+    addTask(b.dataset.text, { ...ctl.st, catId: b.dataset.cat });
+    added++;
+    input.value = '';
+    input.focus({ preventScroll: true });
+    const note = sheet.$('.add-note');
+    note.textContent = `Added ${added} ${added === 1 ? 'task' : 'tasks'} ✓`;
+    note.classList.remove('bump');
+    void note.offsetWidth;
+    note.classList.add('bump');
+    paintSuggest();
+  });
 }
 
 /* ---------- edit task ---------- */
@@ -526,7 +560,7 @@ export function openSettings() {
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v3.2 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · v3.3 · Everything stays on this device.</p>`,
   });
 
   const paintToggles = () =>

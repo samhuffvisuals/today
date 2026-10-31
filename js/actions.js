@@ -1,6 +1,6 @@
 // State changes + the feedback (haptics, effects) that goes with them.
 // Each one is called synchronously from a gesture handler so haptics can fire.
-import { store, uid, MAX_CATEGORIES, MAX_PACKS } from './store.js';
+import { store, uid, remember, MAX_CATEGORIES, MAX_PACKS } from './store.js';
 import { stats, tasksFor } from './rollover.js';
 import { haptic } from './haptics.js';
 import { renderHeader, renderList, render, taskEl, colorOf, catOf } from './ui/render.js';
@@ -58,6 +58,7 @@ export function addTask(text, { catId, type, days }) {
     t.dayKey = s.day.key;
   }
   s.tasks.push(t);
+  remember(s, text, catId);
   s.settings.lastCat = catId;
   s.settings.lastType = type;
   store.save();
@@ -78,6 +79,7 @@ export function addPack(packId) {
   for (const text of p.items) {
     if (onList.has(text.toLowerCase())) continue;
     s.tasks.push({ id: uid(), text, catId: p.catId, type: 'today', order: order++, dayKey: s.day.key });
+    remember(s, text, p.catId);
     onList.add(text.toLowerCase());
     n++;
   }
@@ -98,6 +100,7 @@ export function editTask(id, { text, catId, type, days }) {
   const s = store.state;
   const t = s.tasks.find((x) => x.id === id);
   if (!t) return;
+  if (t.text !== text) remember(s, text, catId);
   t.text = text;
   t.catId = catId;
   if (type === 'daily') {

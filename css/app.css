@@ -78,7 +78,8 @@ button {
   touch-action: manipulation;
 }
 
-button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input:focus-visible, textarea:focus-visible { outline: 2px solid rgba(255, 255, 255, .28); outline-offset: 0; }
 
 svg { display: block; }
 
@@ -662,6 +663,25 @@ textarea.field { height: auto; padding: 14px 18px; line-height: 1.4; resize: non
 .add-note { font-size: 14px; font-weight: 700; color: var(--text-3); text-align: center; margin: 14px 0 0; }
 .add-note.bump { color: var(--green); animation: bump .45s var(--spring); }
 @keyframes bump { 0% { transform: scale(.9); } }
+
+/* Suggestions under the add field */
+.suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.suggest[hidden] { display: none; }
+.sug {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 14px 0 10px;
+  border-radius: 21px;
+  background: var(--field);
+  font-size: 16px;
+  font-weight: 750;
+  max-width: 100%;
+  transition: transform .4s var(--spring), background .2s;
+}
+.sug:active { transform: scale(.93); background: color-mix(in srgb, var(--c) 25%, var(--field)); }
+.sug i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--c); }
 
 .seg { display: flex; gap: 4px; padding: 4px; border-radius: 15px; background: var(--field); margin-top: 14px; }
 .seg button {

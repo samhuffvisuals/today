@@ -36,6 +36,8 @@ function defaults() {
     day: null, // { key: 'YYYY-MM-DD', done: { [taskId]: timestamp } }
     history: {}, // { 'YYYY-MM-DD': { d: done, t: total } }
     seeded: 0, // which starter set has been applied
+    // everything ever added, for suggestions: { [lowercased text]: { text, catId, n, last } }
+    recent: {},
     carry: null, // { from: dayKey, ids: [] } unfinished one-offs offered for carry-over
   };
 }
@@ -81,6 +83,11 @@ export function normalize(raw) {
   if (s.day && (typeof s.day.key !== 'string' || typeof s.day.done !== 'object')) s.day = null;
   if (!s.settings.collapsed || typeof s.settings.collapsed !== 'object') s.settings.collapsed = {};
   s.seeded = Number.isFinite(s.seeded) ? s.seeded : 0;
+  if (!s.recent || typeof s.recent !== 'object' || Array.isArray(s.recent)) s.recent = {};
+  for (const [k, r] of Object.entries(s.recent)) {
+    if (!r || typeof r.text !== 'string' || !r.text.trim()) delete s.recent[k];
+    else s.recent[k] = { text: r.text.trim(), catId: catIds.has(r.catId) ? r.catId : 'general', n: Number.isFinite(r.n) ? r.n : 1, last: Number.isFinite(r.last) ? r.last : 0 };
+  }
   delete s.app;
   delete s.exportedAt;
   return s;
@@ -138,6 +145,50 @@ export function seed(state, dayKey) {
   }
   state.seeded = SEED_VERSION;
   return true;
+}
+
+/* ---------- suggestions ---------- */
+
+const MAX_RECENT = 300;
+const norm = (t) => t.trim().toLowerCase().replace(/\s+/g, ' ');
+
+// Remember a task name (and the group it went to) so it can be offered next time.
+export function remember(state, text, catId, when = Date.now()) {
+  const k = norm(text);
+  if (!k) return;
+  const r = state.recent[k];
+  if (r) {
+    r.n++;
+    r.last = when;
+    r.text = text.trim();
+    if (catId) r.catId = catId;
+  } else state.recent[k] = { text: text.trim(), catId: catId || 'general', n: 1, last: when };
+  const keys = Object.keys(state.recent);
+  if (keys.length > MAX_RECENT) {
+    keys
+      .sort((a, b) => state.recent[a].n - state.recent[b].n || state.recent[a].last - state.recent[b].last)
+      .slice(0, keys.length - MAX_RECENT)
+      .forEach((x) => delete state.recent[x]);
+  }
+}
+
+// Best matches for what's being typed. Empty query: the most used. `exclude` is a Set of normalized texts already on today.
+export function suggest(state, query, exclude = new Set(), limit = 6) {
+  const q = norm(query || '');
+  const words = q.split(' ').filter(Boolean);
+  const scored = [];
+  for (const [k, r] of Object.entries(state.recent)) {
+    if (exclude.has(k)) continue;
+    let score = 0;
+    if (!q) score = 1;
+    else if (k.startsWith(q)) score = 4;
+    else if (words.every((w) => k.split(' ').some((kw) => kw.startsWith(w)))) score = 3;
+    else if (k.includes(q)) score = 2;
+    if (!score) continue;
+    scored.push({ ...r, score });
+  }
+  scored.sort((a, b) => b.score - a.score || b.n - a.n || b.last - a.last);
+  return scored.slice(0, limit);
 }
 
 /* ---------- persistence ---------- */
