@@ -512,6 +512,8 @@ export function openPack(id, { onSave } = {}) {
 
 /* ---------- settings ---------- */
 
+export const APP_VERSION = 'v3.7';
+
 const toMinutes = (v) => {
   const [h, m] = v.split(':').map(Number);
   return h * 60 + (m || 0);
@@ -560,8 +562,13 @@ export function openSettings() {
         <button class="set-row" type="button" data-act="import"><span class="label">Import backup…</span>${ICON.right}</button>
       </div>
       <input type="file" accept="application/json,.json" data-role="file" hidden>
+
+      <h3>App</h3>
+      <div class="set-group">
+        <button class="set-row" type="button" data-act="refresh"><span class="label">Get the latest version<small data-role="swv">Reinstalls the app files. Your tasks stay.</small></span>${ICON.right}</button>
+      </div>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · v3.6 · Everything stays on this device.</p>`,
+      <p class="hint center">Today · ${APP_VERSION} · Everything stays on this device.</p>`,
   });
 
   const paintToggles = () =>
@@ -651,7 +658,15 @@ export function openSettings() {
     if (act === 'history') openHistory();
     if (act === 'export') doExport();
     if (act === 'import') fileInput.click();
+    if (act === 'refresh') hardRefresh();
   });
+
+  // Show which service worker version is actually serving the page.
+  navigator.serviceWorker?.addEventListener('message', (e) => {
+    const el = sheet.$('[data-role=swv]');
+    if (e.data?.version && el) el.textContent = `Files: ${e.data.version}. Tap to reinstall; your tasks stay.`;
+  }, { once: true });
+  navigator.serviceWorker?.controller?.postMessage('version');
 
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files?.[0];
@@ -672,6 +687,22 @@ export function openSettings() {
     eraseAll();
     location.reload();
   });
+}
+
+// Drop every cached file and the service worker, then reload from the network.
+async function hardRefresh() {
+  toast('Refreshing…');
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.();
+    await Promise.all((regs || []).map((r) => r.unregister()));
+    const keys = await caches?.keys?.();
+    await Promise.all((keys || []).map((k) => caches.delete(k)));
+    // Re-fetch every file this page loaded straight from the network, so the browser's
+    // own HTTP cache (GitHub Pages: 10 minutes) holds fresh copies before we reload.
+    const urls = new Set([location.href.split('?')[0], ...performance.getEntriesByType('resource').map((r) => r.name)]);
+    await Promise.all([...urls].filter((u) => u.startsWith(location.origin)).map((u) => fetch(u, { cache: 'reload' }).catch(() => {})));
+  } catch {}
+  location.replace(location.pathname + '?r=' + Date.now());
 }
 
 function doExport() {

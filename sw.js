@@ -1,6 +1,6 @@
 // Offline-first service worker.
 // Bump VERSION whenever you deploy changed files so phones pick up the update.
-const VERSION = 'today-v9';
+const VERSION = 'today-v10';
 
 const ASSETS = [
   './',
@@ -26,7 +26,19 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the HTTP cache, so a new version never installs with stale files
+  // (GitHub Pages serves everything with a 10-minute max-age).
+  e.waitUntil(
+    caches
+      .open(VERSION)
+      .then((c) => Promise.all(ASSETS.map((u) => fetch(u, { cache: 'reload' }).then((r) => (r.ok ? c.put(u, r) : Promise.reject(new Error(`${u} ${r.status}`)))))))
+      .then(() => self.skipWaiting())
+  );
+});
+
+// The page can ask which version is serving it.
+self.addEventListener('message', (e) => {
+  if (e.data === 'version') e.source?.postMessage({ version: VERSION });
 });
 
 self.addEventListener('activate', (e) => {
