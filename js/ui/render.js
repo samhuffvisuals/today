@@ -110,27 +110,36 @@ export function renderHeader() {
   updateGroupCounts();
 }
 
-// Slide a group's body open or shut, then let display:none take over.
+// Slide a group's body open or shut. The end state never depends on the animation:
+// a collapsed body gets the hidden attribute (display:none) from the finish callback,
+// from a timer fallback, and from every later render.
+const animUntil = new Map();
+const isAnimating = (catId) => (animUntil.get(catId) || 0) > performance.now();
+
 export function animateCollapse(catId, collapsed) {
   const g = groupEls.get(catId);
   if (!g) return;
   const body = g.querySelector('.group-body');
-  if (reduceMotion()) {
-    body.hidden = collapsed;
-    return;
-  }
-  body.getAnimations().forEach((a) => a.cancel());
-  g.classList.add('animating');
-  body.hidden = false;
-  const h = body.offsetHeight;
-  const frames = collapsed
-    ? [{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }]
-    : [{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 1 }];
-  const anim = body.animate(frames, { duration: 380, easing: 'cubic-bezier(.22, 1, .36, 1)' });
-  anim.onfinish = anim.oncancel = () => {
-    g.classList.remove('animating');
+  const settle = () => {
+    animUntil.delete(catId);
     body.hidden = !!store.state.settings.collapsed[catId];
   };
+  if (reduceMotion() || typeof body.animate !== 'function') return settle();
+  try {
+    body.getAnimations?.().forEach((a) => a.cancel());
+    body.hidden = false;
+    const h = body.offsetHeight;
+    const dur = 360;
+    animUntil.set(catId, performance.now() + dur + 60);
+    const frames = collapsed
+      ? [{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }]
+      : [{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 1 }];
+    const anim = body.animate(frames, { duration: dur, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: collapsed ? 'forwards' : 'none' });
+    anim.onfinish = anim.oncancel = settle;
+    setTimeout(settle, dur + 80); // in case the finish callback never comes
+  } catch {
+    settle();
+  }
 }
 
 /* ---------- packs ---------- */
@@ -182,7 +191,7 @@ function updateGroup(g, c, list) {
   g.classList.toggle('collapsed', collapsed);
   g.querySelector('.group-head').setAttribute('aria-expanded', String(!collapsed));
   // display:none when collapsed, so no browser can keep the space. animateCollapse() handles the transition.
-  if (!g.classList.contains('animating')) g.querySelector('.group-body').hidden = collapsed;
+  if (!isAnimating(c.id)) g.querySelector('.group-body').hidden = collapsed;
   setCount(g, list);
 }
 
