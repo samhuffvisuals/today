@@ -214,6 +214,36 @@ export function deleteCategory(id) {
   render({ animate: true });
 }
 
+// Copies tasks from an earlier day onto today (skipping ones already on the list).
+// items: [{ text, catId }]. Returns how many were added.
+export function copyTasks(items) {
+  const s = store.state;
+  const onList = new Set(tasksFor(s, s.day.key).map((t) => t.text.trim().toLowerCase()));
+  const catIds = new Set(s.categories.map((c) => c.id));
+  let order = topOrder(s) - items.length;
+  let n = 0;
+  for (const it of items) {
+    const text = (it.text || '').trim();
+    if (!text || onList.has(text.toLowerCase())) continue;
+    const catId = catIds.has(it.catId) ? it.catId : 'general';
+    s.tasks.push({ id: uid(), text, catId, type: 'today', order: order++, dayKey: s.day.key });
+    remember(s, text, catId);
+    delete s.settings.collapsed[catId];
+    onList.add(text.toLowerCase());
+    n++;
+  }
+  if (!n) {
+    haptic('snap');
+    toast('Those are already on today');
+    return 0;
+  }
+  store.save();
+  haptic('success');
+  render({ animate: true });
+  toast(`Added ${n} ${n === 1 ? 'task' : 'tasks'} to today`);
+  return n;
+}
+
 // Moves every task shown today in one group to another group. Packs that mostly
 // came from this group follow, and suggestions learn the new home.
 export function moveGroupTasks(fromCatId, toCatId) {

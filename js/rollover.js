@@ -59,7 +59,9 @@ export function rollover(state, now = new Date()) {
 
   const prev = state.day.key;
   const s = stats(state);
-  state.history[prev] = { d: s.done, t: s.total };
+  // Keep the day's list too, so it can be looked at and copied later.
+  const list = tasksFor(state, prev).map((t) => ({ text: t.text, catId: t.catId, done: !!state.day.done[t.id], daily: t.type === 'daily' }));
+  state.history[prev] = { d: s.done, t: s.total, tasks: list };
 
   // Days the app was never opened count as 0% for whatever daily tasks were scheduled.
   let k = addDays(prev, 1);

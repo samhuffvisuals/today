@@ -914,6 +914,44 @@ button.cell:active { transform: scale(.88); }
 .cell[style*="--m"] { color: var(--text); }
 .cell.today { box-shadow: 0 0 0 2.5px var(--surface-2), 0 0 0 5px var(--text); }
 .cell.sel { transform: scale(1.12); }
+.cell.has { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .14); }
+.cell.perfect.has { box-shadow: 0 0 12px color-mix(in srgb, var(--green) 45%, transparent); }
+
+/* A past day's list, with a picker to copy tasks onto today */
+.day-panel { margin-top: 6px; animation: rise .4s var(--spring-soft); }
+.day-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.day-task {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 14px;
+  background: var(--field);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 750;
+  transition: background .2s, box-shadow .2s, transform .35s var(--spring);
+}
+.day-task:active:not(:disabled) { transform: scale(.98); }
+.day-task[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 22%, var(--field)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent); }
+.day-task:disabled { cursor: default; }
+.dt-check {
+  width: 26px; height: 26px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--c) 60%, transparent);
+  color: transparent;
+}
+.dt-check.done { background: var(--green); border-color: var(--green); color: #000; }
+.dt-check svg { width: 14px; height: 14px; }
+.dt-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-meta { font-size: 12px; font-weight: 800; color: var(--text-3); flex: none; }
+.day-task[aria-pressed="true"] .dt-meta { color: var(--text-2); }
+
 .hist-detail { text-align: center; min-height: 22px; margin: 18px 0 6px; font-size: 16px; font-weight: 750; color: var(--text-2); }
 
 /* ============ Finish screen ============ */

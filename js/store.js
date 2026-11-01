@@ -82,6 +82,11 @@ export function normalize(raw) {
     .slice(0, MAX_PACKS);
 
   if (!s.history || typeof s.history !== 'object') s.history = {};
+  for (const [k, h] of Object.entries(s.history)) {
+    if (!h || typeof h !== 'object') { delete s.history[k]; continue; }
+    if (Array.isArray(h.tasks)) h.tasks = h.tasks.filter((t) => t && typeof t.text === 'string').map((t) => ({ text: t.text, catId: typeof t.catId === 'string' ? t.catId : 'general', done: !!t.done, daily: !!t.daily }));
+    else delete h.tasks;
+  }
   if (s.day && (typeof s.day.key !== 'string' || typeof s.day.done !== 'object')) s.day = null;
   if (!s.settings.collapsed || typeof s.settings.collapsed !== 'object') s.settings.collapsed = {};
   s.seeded = Number.isFinite(s.seeded) ? s.seeded : 0;
