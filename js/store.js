@@ -38,6 +38,8 @@ function defaults() {
     seeded: 0, // which starter set has been applied
     // everything ever added, for suggestions: { [lowercased text]: { text, catId, n, last } }
     recent: {},
+    quote: null, // { key: dayKey, i } today's quote
+    quotesSeen: [], // indexes already shown, so nothing repeats until the library is used up
     carry: null, // { from: dayKey, ids: [] } unfinished one-offs offered for carry-over
   };
 }
@@ -84,6 +86,8 @@ export function normalize(raw) {
   if (!s.settings.collapsed || typeof s.settings.collapsed !== 'object') s.settings.collapsed = {};
   s.seeded = Number.isFinite(s.seeded) ? s.seeded : 0;
   if (!s.recent || typeof s.recent !== 'object' || Array.isArray(s.recent)) s.recent = {};
+  if (!s.quote || typeof s.quote.key !== 'string' || !Number.isInteger(s.quote.i)) s.quote = null;
+  if (!Array.isArray(s.quotesSeen)) s.quotesSeen = [];
   for (const [k, r] of Object.entries(s.recent)) {
     if (!r || typeof r.text !== 'string' || !r.text.trim()) delete s.recent[k];
     else s.recent[k] = { text: r.text.trim(), catId: catIds.has(r.catId) ? r.catId : 'general', n: Number.isFinite(r.n) ? r.n : 1, last: Number.isFinite(r.last) ? r.last : 0 };

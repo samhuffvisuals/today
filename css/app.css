@@ -211,7 +211,7 @@ label.hap > input {
 }
 
 .mood {
-  margin: 10px 0 24px;
+  margin: 10px 0 14px;
   font-size: clamp(22px, 6.2vw, 28px);
   font-weight: 850;
   letter-spacing: -.025em;
@@ -242,6 +242,31 @@ label.hap > input {
   font-variant-numeric: tabular-nums;
 }
 .ring-label small { font-size: 17px; margin-left: 1px; letter-spacing: 0; color: var(--text-2); }
+
+/* ============ Quote of the day ============ */
+
+.quote {
+  margin: 0 0 24px;
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: border-color .9s var(--out);
+}
+.q-text {
+  display: block;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--text-2);
+  letter-spacing: -.005em;
+}
+.q-src {
+  display: block;
+  margin-top: 5px;
+  font-style: normal;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--text-3);
+}
 
 /* ============ Packs ============ */
 

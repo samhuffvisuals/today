@@ -5,6 +5,7 @@ import { store, PALETTE } from '../store.js';
 import { tasksFor, stats, daysDone, keyToDate, addDays } from '../rollover.js';
 import { SPRING, reduceMotion } from './effects.js';
 import { ICON, esc } from './icons.js';
+import { quoteForDay } from '../quotes.js';
 
 const $ = (s) => document.querySelector(s);
 const taskEls = new Map();
@@ -101,6 +102,8 @@ export function renderHeader() {
     mood.classList.add('bump');
   }
 
+  renderQuote();
+
   const n = daysDone(s);
   $('#days-n').textContent = n;
   $('.days-word').textContent = n === 1 ? 'day' : 'days';
@@ -140,6 +143,21 @@ export function animateCollapse(catId, collapsed) {
   } catch {
     settle();
   }
+}
+
+/* ---------- quote of the day ---------- */
+
+function renderQuote() {
+  const s = store.state;
+  const had = s.quote?.key;
+  const q = quoteForDay(s, s.day.key);
+  if (had !== s.quote.key) store.save();
+  const el = $('#quote');
+  if (el.dataset.i === String(s.quote.i)) return;
+  el.dataset.i = s.quote.i;
+  el.dataset.kind = q.t;
+  el.querySelector('.q-text').textContent = q.t === 'v' ? `“${q.text}”` : q.t === 'q' ? `“${q.text}”` : q.text;
+  el.querySelector('.q-src').textContent = q.t === 'v' ? `${q.src} (ESV)` : q.src;
 }
 
 /* ---------- packs ---------- */
