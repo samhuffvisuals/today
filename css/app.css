@@ -358,6 +358,27 @@ label.hap > input {
   transition: background .3s, color .3s;
 }
 .g-count.complete { background: var(--c); color: #000; }
+/* Progress bar, shown only while the group is collapsed */
+.g-bar {
+  display: none;
+  width: 72px;
+  height: 7px;
+  flex: none;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--c) 18%, transparent);
+  overflow: hidden;
+  margin-right: 2px;
+}
+.group.collapsed .g-bar { display: block; animation: rise .35s var(--spring-soft) both; }
+.g-bar i {
+  display: block;
+  height: 100%;
+  width: var(--p, 0%);
+  border-radius: inherit;
+  background: var(--c);
+  transition: width .6s var(--spring-soft);
+}
+.g-bar.complete { box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); }
 .chev { width: 20px; height: 20px; color: var(--text-3); transition: transform .45s var(--spring); flex: none; }
 .group.collapsed .chev { transform: rotate(-90deg); }
 

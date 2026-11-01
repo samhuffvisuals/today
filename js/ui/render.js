@@ -171,7 +171,7 @@ function createGroup(id) {
   g.className = 'group';
   g.dataset.cat = id;
   g.innerHTML = `<button class="group-head" type="button">
-      <span class="g-emoji"></span><span class="g-name"></span><span class="g-count"></span>${ICON.chev}
+      <span class="g-emoji"></span><span class="g-name"></span><span class="g-bar" aria-hidden="true"><i></i></span><span class="g-count"></span>${ICON.chev}
     </button>
     <div class="group-body"><div class="group-inner">
       <button class="add-inline" type="button"><span class="ai-plus">${ICON.plus}</span><span class="ai-text"></span></button>
@@ -200,6 +200,9 @@ function setCount(g, list) {
   const el = g.querySelector('.g-count');
   el.textContent = `${done}/${list.length}`;
   el.classList.toggle('complete', done === list.length);
+  const pct = list.length ? Math.round((done / list.length) * 100) : 0;
+  g.querySelector('.g-bar').style.setProperty('--p', `${pct}%`);
+  g.querySelector('.g-bar').classList.toggle('complete', list.length > 0 && done === list.length);
 }
 
 function updateGroupCounts() {
