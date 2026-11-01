@@ -212,6 +212,30 @@ export function deleteCategory(id) {
   render({ animate: true });
 }
 
+// Moves every task shown today in one group to another group. Packs that mostly
+// came from this group follow, and suggestions learn the new home.
+export function moveGroupTasks(fromCatId, toCatId) {
+  const s = store.state;
+  if (fromCatId === toCatId || !s.categories.some((c) => c.id === toCatId)) return 0;
+  const moving = tasksFor(s, s.day.key).filter((t) => t.catId === fromCatId);
+  if (!moving.length) return 0;
+  const names = new Set(moving.map((t) => t.text.trim().toLowerCase()));
+  for (const t of moving) t.catId = toCatId;
+  for (const p of s.packs) {
+    if (p.catId !== fromCatId || !p.items.length) continue;
+    const hits = p.items.filter((x) => names.has(x.trim().toLowerCase())).length;
+    if (hits / p.items.length >= 0.6) p.catId = toCatId;
+  }
+  for (const k of names) if (s.recent[k]) s.recent[k].catId = toCatId;
+  delete s.settings.collapsed[toCatId];
+  store.save();
+  haptic('success');
+  render({ animate: true });
+  const to = s.categories.find((c) => c.id === toCatId);
+  toast(`Moved ${moving.length} ${moving.length === 1 ? 'task' : 'tasks'} to ${to.emoji} ${to.name}`);
+  return moving.length;
+}
+
 export function savePack({ id, name, emoji, catId, items }) {
   const s = store.state;
   let p = id && s.packs.find((x) => x.id === id);

@@ -1,7 +1,7 @@
 // Bottom sheets: quick add, edit task, category editor, settings.
 import { store, PALETTE, MAX_CATEGORIES, MAX_PACKS, suggest, exportData, importData, eraseAll } from '../store.js';
 import { haptic, setHapticsEnabled, overlayHaptics, stats as hapticStats } from '../haptics.js';
-import { addTask, editTask, deleteTask, saveCategory, deleteCategory, savePack, deletePack } from '../actions.js';
+import { addTask, editTask, deleteTask, saveCategory, deleteCategory, savePack, deletePack, moveGroupTasks } from '../actions.js';
 import { colorOf, catOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
 import { tasksFor } from '../rollover.js';
 import { openHistory } from './history.js';
@@ -341,6 +341,7 @@ export function openCategory(id, { onSave } = {}) {
     return;
   }
   const used = new Set(s.categories.map((x) => x.color));
+  const todayCount = c ? tasksFor(s, s.day.key).filter((t) => t.catId === c.id).length : 0;
   let emoji = c?.emoji || '⭐';
   let color = c?.color || (PALETTE.find((p) => !used.has(p.id)) || PALETTE[0]).id;
 
@@ -354,6 +355,13 @@ export function openCategory(id, { onSave } = {}) {
       <div class="emoji-pick">${EMOJI.map((e) => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
       <div class="palette">${PALETTE.map((p) => `<button type="button" class="swatch" data-color="${p.id}" style="--c:${p.hex}" aria-label="${p.id}"></button>`).join('')}</div>
       <button class="btn" type="button" data-save>${c ? 'Save' : 'Create category'}</button>
+      ${c && todayCount ? `
+      <h3>Move today's tasks</h3>
+      <p class="hint">Send all ${todayCount} ${todayCount === 1 ? 'task' : 'tasks'} in ${esc(c.name)} to another group.</p>
+      <div class="chips" data-role="move">${s.categories
+        .filter((x) => x.id !== c.id)
+        .map((x) => `<button type="button" class="chip" data-move="${x.id}" style="--c:${colorOf(x.color)}"><span>${esc(x.emoji)}</span>${esc(x.name)}</button>`)
+        .join('')}${s.categories.length < MAX_CATEGORIES ? `<button type="button" class="chip chip-new" data-move-new>${ICON.plus}<span>New group</span></button>` : ''}</div>` : ''}
       ${c && c.id !== 'general' ? `<button class="btn danger" type="button" data-del>Delete category</button><p class="hint">Its tasks move to ${esc(s.categories[0].name)}.</p>` : ''}`,
   });
 
@@ -410,6 +418,26 @@ export function openCategory(id, { onSave } = {}) {
     deleteCategory(c.id);
     sheet.close();
     onSave?.(null);
+  });
+
+  sheet.$('[data-role=move]')?.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.hasAttribute('data-move-new')) {
+      // Make the group first, then move everything into it.
+      openCategory(null, {
+        onSave(created) {
+          if (!created) return;
+          moveGroupTasks(c.id, created.id);
+          sheet.close();
+          onSave?.(created);
+        },
+      });
+      return;
+    }
+    moveGroupTasks(c.id, b.dataset.move);
+    sheet.close();
+    onSave?.(c);
   });
 }
 
@@ -512,7 +540,7 @@ export function openPack(id, { onSave } = {}) {
 
 /* ---------- settings ---------- */
 
-export const APP_VERSION = 'v3.9';
+export const APP_VERSION = 'v3.10';
 
 const toMinutes = (v) => {
   const [h, m] = v.split(':').map(Number);
@@ -549,7 +577,7 @@ export function openSettings() {
 
       <h3>Categories</h3>
       <div class="set-group" data-role="cats"></div>
-      <p class="hint">Tip: long-press a category header in the list to edit it.</p>
+      <p class="hint">Tip: press and hold a group's header in the list to edit it or move all of its tasks to another group.</p>
 
       <h3>History</h3>
       <div class="set-group">
