@@ -44,13 +44,14 @@ export function toggleTask(id) {
   if (allDone) setTimeout(() => celebrate(), 380);
 }
 
-function nextOrder(s) {
-  return s.tasks.reduce((m, t) => Math.max(m, t.order || 0), 0) + 1;
+// New tasks go to the top of their group: they take an order below everything else.
+function topOrder(s) {
+  return s.tasks.reduce((m, t) => Math.min(m, t.order || 0), 0) - 1;
 }
 
 export function addTask(text, { catId, type, days }) {
   const s = store.state;
-  const t = { id: uid(), text, catId, type, order: nextOrder(s) };
+  const t = { id: uid(), text, catId, type, order: topOrder(s) };
   if (type === 'daily') {
     t.days = days && days.length && days.length < 7 ? [...days] : null;
     t.since = s.day.key;
@@ -74,7 +75,8 @@ export function addPack(packId) {
   const p = s.packs.find((x) => x.id === packId);
   if (!p) return 0;
   const onList = new Set(tasksFor(s, s.day.key).map((t) => t.text.trim().toLowerCase()));
-  let order = nextOrder(s);
+  // Above everything already there, keeping the pack's own order (first item highest).
+  let order = topOrder(s) - p.items.length;
   let n = 0;
   for (const text of p.items) {
     if (onList.has(text.toLowerCase())) continue;
