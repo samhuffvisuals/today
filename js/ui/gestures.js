@@ -1,6 +1,7 @@
 // Touch gestures on the task list:
 //  - swipe right to complete, left to delete (rubber-band + snap point)
-//  - long-press a task to lift it, drag to reorder within its group
+//  - long-press a task to lift it, drag to reorder within its group;
+//    let go without moving and it opens the task's menu instead
 //  - long-press a category header to edit it
 // Touch events are used directly (not pointer events) because iOS needs a
 // non-passive touchmove to stop scrolling once a swipe or drag starts.
@@ -57,7 +58,8 @@ export function initGestures(root, scroller, cb) {
       return;
     }
     const li = target.closest('.task');
-    if (!li) return;
+    // Steps have their own taps; they don't swipe or drag the task.
+    if (!li || target.closest('.subs')) return;
     g = { kind: 'task', li, fg: li.querySelector('.task-fg'), x0: x, y0: y, x, y, mode: 'pending', armed: 0, w: li.offsetWidth };
     g.timer = setTimeout(() => g && g.mode === 'pending' && lift(), LIFT_MS);
   }
@@ -95,6 +97,7 @@ export function initGestures(root, scroller, cb) {
       swipeMove(dx - g.off);
     } else if (g.mode === 'drag') {
       if (e.cancelable) e.preventDefault();
+      if (Math.hypot(dx, dy) > SLOP * 1.5) g.moved = true;
       dragMove();
     }
   }
@@ -244,13 +247,22 @@ export function initGestures(root, scroller, cb) {
   }
 
   function dragEnd() {
-    const { li, items, idx, target, raf } = g;
+    const { li, items, idx, target, raf, moved: wasMoved } = g;
     g = null;
     cancelAnimationFrame(raf);
     lock(false);
     suppressClick();
     li.classList.remove('lifted');
     li.parentElement?.classList.remove('reordering');
+    // Held without moving: a long-press, not a drag.
+    if (!wasMoved) {
+      li.style.transition = 'transform .35s cubic-bezier(.2,1.2,.4,1)';
+      li.style.transform = '';
+      items.forEach((el) => el !== li && (el.style.transform = ''));
+      setTimeout(() => (li.style.transition = ''), 360);
+      cb.onPress?.(li.dataset.id);
+      return;
+    }
     haptic('drop'); // fires: we're inside touchend
     const ids = items.map((el) => el.dataset.id);
     const [moved] = ids.splice(idx, 1);

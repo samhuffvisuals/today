@@ -73,10 +73,32 @@ const moodFor = (pct, total) => {
   return m;
 };
 
+// Long day names ("Wednesday") at the full size run into the progress ring.
+// Shrink the font just enough that the name fits the space left of the ring.
+function fitWeekday() {
+  const h = $('#weekday');
+  h.style.fontSize = '';
+  const room = h.clientWidth;
+  const need = h.scrollWidth;
+  if (!room || need <= room) return;
+  const size = parseFloat(getComputedStyle(h).fontSize);
+  h.style.fontSize = `${Math.floor(size * (room / need) * 0.98)}px`;
+}
+let fitTimer = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(fitWeekday, 100);
+});
+document.fonts?.ready?.then(fitWeekday);
+
 export function renderHeader() {
   const s = store.state;
   const d = keyToDate(s.day.key);
-  $('#weekday').textContent = d.toLocaleDateString(undefined, { weekday: 'long' });
+  const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
+  if ($('#weekday').textContent !== weekday) {
+    $('#weekday').textContent = weekday;
+    fitWeekday();
+  }
   $('#monthday').textContent = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 
   const { done, total } = stats(s);
@@ -232,7 +254,8 @@ function createTask(id) {
   const li = document.createElement('li');
   li.className = 'task';
   li.dataset.id = id;
-  li.innerHTML = `<div class="swipe-bg"><span class="sb sb-done">${ICON.check}</span><span class="sb sb-del">${ICON.trash}</span></div>
+  li.innerHTML = `<div class="task-card">
+    <div class="swipe-bg"><span class="sb sb-done">${ICON.check}</span><span class="sb sb-del">${ICON.trash}</span></div>
     <div class="task-fg">
       <button class="check" type="button">
         <svg viewBox="0 0 32 32" aria-hidden="true">
@@ -242,7 +265,10 @@ function createTask(id) {
         </svg>
       </button>
       <div class="task-body" data-haptic><span class="task-text"></span><span class="task-meta"></span></div>
-    </div>`;
+      <button class="sub-toggle" type="button" hidden><span class="sub-count"></span>${ICON.chev}</button>
+    </div></div>
+    <div class="subs" hidden><ul class="sub-list"></ul>
+      <button class="sub-add" type="button"><span class="ai-plus">${ICON.plus}</span>Add a step</button></div>`;
   return li;
 }
 
@@ -262,6 +288,34 @@ function updateTask(li, t, c) {
   const btn = li.querySelector('.check');
   btn.setAttribute('aria-label', `${done ? 'Uncheck' : 'Complete'} ${t.text}`);
   btn.setAttribute('aria-pressed', String(done));
+  updateSubs(li, t);
+}
+
+// Steps: a count with an arrow on the card, and the steps underneath when open.
+function updateSubs(li, t) {
+  const subs = t.subs || [];
+  const open = subs.length > 0 && t.subsOpen !== false;
+  const toggle = li.querySelector('.sub-toggle');
+  toggle.hidden = !subs.length;
+  li.classList.toggle('has-subs', subs.length > 0);
+  li.classList.toggle('subs-open', open);
+  li.querySelector('.subs').hidden = !open;
+  if (!subs.length) return;
+  const n = subs.filter((x) => x.done).length;
+  li.querySelector('.sub-count').textContent = `${n}/${subs.length}`;
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.setAttribute('aria-label', `${open ? 'Hide' : 'Show'} steps for ${t.text}, ${n} of ${subs.length} done`);
+  const list = li.querySelector('.sub-list');
+  const sig = JSON.stringify(subs);
+  if (list.dataset.sig === sig) return;
+  list.dataset.sig = sig;
+  list.innerHTML = subs
+    .map(
+      (x) => `<li class="sub${x.done ? ' done' : ''}" data-sub="${x.id}">
+        <button class="sub-check" type="button" aria-pressed="${x.done}" aria-label="${x.done ? 'Uncheck' : 'Complete'} ${esc(x.text)}">${ICON.check}</button>
+        <span class="sub-text">${esc(x.text)}</span></li>`
+    )
+    .join('');
 }
 
 function placeAfter(parent, el, prev) {

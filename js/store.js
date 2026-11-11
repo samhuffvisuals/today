@@ -29,7 +29,8 @@ function defaults() {
       lastType: 'today',
     },
     categories: [{ id: 'general', name: 'General', emoji: '✅', color: 'blue' }],
-    // task: { id, text, catId, type: 'daily'|'today', order, days?: number[]|null, since?: dayKey, dayKey?: dayKey }
+    // task: { id, text, catId, type: 'daily'|'today', order, days?: number[]|null, since?: dayKey, dayKey?: dayKey,
+    //         subs?: [{ id, text, done }], subsOpen?: boolean }
     tasks: [],
     // pack: { id, name, emoji, catId, items: string[] } — one tap drops every item onto today
     packs: [],
@@ -67,6 +68,9 @@ export function normalize(raw) {
       type: t.type === 'daily' ? 'daily' : 'today',
       catId: catIds.has(t.catId) ? t.catId : 'general',
       order: Number.isFinite(t.order) ? t.order : i,
+      subs: Array.isArray(t.subs)
+        ? t.subs.filter((x) => x && x.id && typeof x.text === 'string' && x.text.trim()).map((x) => ({ id: x.id, text: x.text.trim(), done: !!x.done }))
+        : [],
     }));
 
   if (!Array.isArray(s.packs)) s.packs = [];

@@ -193,10 +193,11 @@ label.hap > input {
 .icon-btn svg { width: 24px; height: 24px; }
 
 .hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 22px 0 4px; }
-.date { min-width: 0; }
+.date { flex: 1 1 auto; min-width: 0; }
 
 #weekday {
   margin: 0;
+  white-space: nowrap; /* one line; fitWeekday() shrinks long names so they never run into the ring */
   font-size: clamp(46px, 13.5vw, 78px);
   font-weight: 900;
   letter-spacing: -.05em;
@@ -456,6 +457,7 @@ label.hap > input {
 /* ============ Task ============ */
 
 .task { position: relative; border-radius: var(--radius); touch-action: pan-y; --p: 0; }
+.task-card { position: relative; border-radius: inherit; }
 
 .swipe-bg {
   position: absolute;
@@ -1054,3 +1056,110 @@ button.cell:active { transform: scale(.88); }
     transition-delay: 0ms !important;
   }
 }
+
+/* ============ Steps (subtasks) ============ */
+
+/* The count and arrow on the card. */
+.sub-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px 0 12px;
+  margin-right: -6px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--c) 20%, transparent);
+  color: var(--c);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition: transform .4s var(--spring), background .2s;
+}
+.sub-toggle[hidden] { display: none; }
+.sub-toggle:active { transform: scale(.92); }
+.sub-toggle .chev { width: 18px; height: 18px; color: currentColor; transform: rotate(-90deg); transition: transform .45s var(--spring); }
+.task.subs-open .sub-toggle .chev { transform: none; }
+.task.done .sub-toggle { background: color-mix(in srgb, var(--green) 25%, transparent); color: var(--green); }
+
+.subs {
+  margin: 6px 0 2px 34px;
+  padding-left: 14px;
+  border-left: 2px solid color-mix(in srgb, var(--c) 45%, transparent);
+  animation: rise .4s var(--spring-soft);
+}
+.subs[hidden] { display: none; }
+.sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: 2px 12px 2px 2px;
+  border-radius: 16px;
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  transition: background .3s;
+}
+.sub-check {
+  width: 44px; height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  position: relative;
+  color: transparent;
+}
+.sub-check::before {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border-radius: 50%;
+  border: 2.5px solid var(--c);
+  transition: background .25s, border-color .25s, transform .4s var(--spring);
+}
+.sub-check svg { position: relative; width: 14px; height: 14px; stroke-width: 3.5; }
+.sub-check:active::before { transform: scale(.82); }
+.sub.done .sub-check { color: #000; }
+.sub.done .sub-check::before { background: var(--green); border-color: var(--green); }
+.sub-text { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; word-break: break-word; }
+.sub.done { background: color-mix(in srgb, var(--green) 12%, transparent); }
+.sub.done .sub-text { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--green); text-decoration-thickness: 2px; }
+.sub-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0 10px 0 8px;
+  border-radius: 14px;
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 700;
+}
+.sub-add .ai-plus { width: 26px; height: 26px; }
+.sub-add:active { background: color-mix(in srgb, var(--c) 12%, transparent); }
+
+/* Steps in the edit sheet */
+.step-edit { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.step-edit:empty { display: none; }
+.step-edit li { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 4px 0 12px; border-radius: 14px; background: var(--field); font-size: 16px; font-weight: 700; }
+.step-edit li > span:nth-child(2) { flex: 1; min-width: 0; word-break: break-word; }
+.step-edit button { width: 40px; height: 40px; border-radius: 12px; color: var(--text-3); font-weight: 800; }
+.step-dot {
+  width: 22px; height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  color: transparent;
+}
+.step-dot svg { width: 12px; height: 12px; stroke-width: 3.5; }
+.step-dot.done { background: var(--green); border-color: var(--green); color: #000; }
+
+/* ============ Long-press menu ============ */
+
+.sheet-kicker { margin: 4px 4px 14px; font-size: 16px; font-weight: 600; color: var(--text-2); line-height: 1.35; }
+.sheet-kicker b { color: var(--text); font-weight: 800; font-size: 20px; }
+.menu-ic { width: 26px; text-align: center; font-size: 19px; color: var(--text-2); }

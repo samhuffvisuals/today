@@ -67,7 +67,7 @@ Home-screen apps keep their data separate from Safari and aren't subject to Safa
 | `js/haptics.js` | `haptic('tap' \| 'success' \| 'snap' \| 'lift' \| 'drop' \| 'celebrate')` |
 | `js/actions.js` | Every state change plus the feedback that goes with it, including adding a pack |
 | `js/ui/render.js` | Header, the day color (red → green), the mood line, pack chips, progress ring, keyed list rendering with FLIP animations |
-| `js/ui/gestures.js` | Swipe to complete/delete, long-press drag to reorder, long-press header |
+| `js/ui/gestures.js` | Swipe to complete/delete, long-press drag to reorder, long-press (no drag) for the task menu, long-press header |
 | `js/ui/sheets.js` | Bottom sheets: quick add, edit task, category editor, pack editor, settings |
 | `js/ui/history.js` | "Your days": a five-week calendar of wins |
 | `js/ui/effects.js` | Particle burst, confetti, the full-screen DONE finish |
@@ -87,6 +87,13 @@ With the default 4:00 AM start, 1:30 AM still counts as yesterday.
 **Days done.** The counter at the top only ever goes up: it's the number of days you finished everything. A missed day adds nothing and takes nothing away, and the history calendar only shows the days you made progress. There is no streak on purpose.
 
 **Day color.** The accent color moves from red (nothing done) through orange and yellow to green (100%). It's a registered CSS custom property (`--accent`) so it animates, and it tints the glow at the top, the ring and the mood line.
+
+## Steps and duplicating
+
+- **Long-press a task** and let go without moving to get **Duplicate**, **Add steps**, **Edit** and **Delete**. Hold and drag still reorders.
+- **Duplicate** puts an unchecked copy right under the original, steps included, with Undo.
+- **Steps** (subtasks) go under any task: add them from the menu, from **Add a step** under the steps, or in the task's edit screen. Paste several lines to add several at once.
+- The card shows `1/3` with an arrow; tap it to fold the steps away. Checking the last step checks off the task, unchecking a step opens it again, and checking the task checks every step. Daily tasks start each day with their steps unchecked.
 
 ## Haptics on iOS
 

@@ -2,10 +2,10 @@
 import { store, seed, remember } from './store.js';
 import { rollover } from './rollover.js';
 import { haptic, setHapticsEnabled, installHaptics } from './haptics.js';
-import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry, addPack } from './actions.js';
+import { toggleTask, deleteTask, reorder, toggleCollapse, carryTasks, dismissCarry, addPack, toggleSub, toggleSubsOpen } from './actions.js';
 import { render } from './ui/render.js';
 import { initGestures } from './ui/gestures.js';
-import { openQuickAdd, openEdit, openSettings, openCategory, openPack } from './ui/sheets.js';
+import { openQuickAdd, openEdit, openSettings, openCategory, openPack, openTaskMenu, openAddSteps } from './ui/sheets.js';
 import { openHistory } from './ui/history.js';
 import { toast } from './ui/toast.js';
 import { ICON } from './ui/icons.js';
@@ -46,9 +46,20 @@ function boot() {
     onDelete: deleteTask,
     onReorder: reorder,
     onHeaderLong: (catId) => openCategory(catId),
+    onPress: (id) => openTaskMenu(id),
   });
 
   groups.addEventListener('click', (e) => {
+    // Steps under a task: check one, fold them away, add more.
+    const subCheck = e.target.closest('.sub-check');
+    if (subCheck) return toggleSub(subCheck.closest('.task').dataset.id, subCheck.closest('.sub').dataset.sub);
+    const subToggle = e.target.closest('.sub-toggle');
+    if (subToggle) return toggleSubsOpen(subToggle.closest('.task').dataset.id);
+    const subAdd = e.target.closest('.sub-add');
+    if (subAdd) {
+      haptic('tap');
+      return openAddSteps(subAdd.closest('.task').dataset.id);
+    }
     const check = e.target.closest('.check');
     if (check) return toggleTask(check.closest('.task').dataset.id);
     const body = e.target.closest('.task-body');

@@ -47,6 +47,8 @@ export function rollover(state, now = new Date()) {
   const key = dayKey(now, state.settings.dayStart);
   if (!state.day) {
     state.day = { key, done: {} };
+  // Daily tasks start the new day with their steps unchecked.
+  for (const t of state.tasks) if (t.type === 'daily') for (const x of t.subs || []) x.done = false;
     return { changed: true };
   }
   if (state.day.key === key) return { changed: false };
