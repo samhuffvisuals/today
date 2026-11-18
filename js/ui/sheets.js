@@ -6,6 +6,7 @@ import { colorOf, catOf, DAY_ORDER, DAY_SHORT, DAY_NAME } from './render.js';
 import { tasksFor } from '../rollover.js';
 import { openHistory } from './history.js';
 import { toast } from './toast.js';
+import { syncOn, syncConf, syncNow, connect, disconnect, onSyncStatus } from '../sync.js';
 import { ICON, esc } from './icons.js';
 
 const stack = [];
@@ -569,7 +570,7 @@ export function openPack(id, { onSave } = {}) {
 
 /* ---------- settings ---------- */
 
-export const APP_VERSION = 'v3.15';
+export const APP_VERSION = 'v3.16';
 
 const toMinutes = (v) => {
   const [h, m] = v.split(':').map(Number);
@@ -613,6 +614,11 @@ export function openSettings() {
         <button class="set-row" type="button" data-act="history"><span class="label">Your days</span>${ICON.right}</button>
       </div>
 
+      <h3>Sync</h3>
+      <div class="set-group">
+        <button class="set-row" type="button" data-act="sync"><span class="label">Sync with your other devices<small data-role="syncstate"></small></span>${ICON.right}</button>
+      </div>
+
       <h3>Backup</h3>
       <div class="set-group">
         <button class="set-row" type="button" data-act="export"><span class="label">Export backup (JSON)</span>${ICON.right}</button>
@@ -625,7 +631,7 @@ export function openSettings() {
         <button class="set-row" type="button" data-act="refresh"><span class="label">Get the latest version<small data-role="swv">Reinstalls the app files. Your tasks stay.</small></span>${ICON.right}</button>
       </div>
       <button class="btn danger" type="button" data-act="erase">Erase all data</button>
-      <p class="hint center">Today · ${APP_VERSION} · Everything stays on this device.</p>`,
+      <p class="hint center" data-role="foot"></p>`,
   });
 
   const paintToggles = () =>
@@ -661,6 +667,13 @@ export function openSettings() {
   paintToggles();
   paintCats();
   paintPacks();
+  const paintSync = () => {
+    sheet.$('[data-role=syncstate]').textContent = syncSummary();
+    sheet.$('[data-role=foot]').textContent = `Today · ${APP_VERSION} · ${syncOn() ? 'Synced through your GitHub account.' : 'Everything stays on this device.'}`;
+  };
+  paintSync();
+  const offSync = onSyncStatus(paintSync);
+  sheet.wrap.addEventListener('transitionend', () => !sheet.wrap.isConnected && offSync());
 
   sheet.$('[data-role=packs]').addEventListener('click', (e) => {
     const b = e.target.closest('button');
@@ -713,6 +726,7 @@ export function openSettings() {
   sheet.body.addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'history') openHistory();
+    if (act === 'sync') openSync();
     if (act === 'export') doExport();
     if (act === 'import') fileInput.click();
     if (act === 'refresh') hardRefresh();
@@ -741,6 +755,8 @@ export function openSettings() {
   });
 
   confirmTap(sheet.$('[data-act=erase]'), 'Tap again to erase everything', () => {
+    // Erase this device only: unhook it from sync first so the other devices keep their tasks.
+    disconnect();
     eraseAll();
     location.reload();
   });
@@ -856,4 +872,96 @@ export function openTaskMenu(id) {
     else if (act === 'edit') openEdit(id);
     else if (act === 'delete') deleteTask(id);
   });
+}
+
+/* ---------- sync ---------- */
+
+const ago = (ms) => {
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 45) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+function syncSummary() {
+  const c = syncConf();
+  if (!syncOn()) return 'Off · keep your phone and Mac in step';
+  if (c.error) return `Couldn’t sync · ${c.error}`;
+  return c.last ? `On · synced ${ago(c.last)}` : 'On';
+}
+
+const TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=Today%20app%20sync';
+
+export function openSync() {
+  const sheet = openSheet({ title: 'Sync', className: 'sync-sheet', content: '<div data-role="body"></div>' });
+  const box = sheet.$('[data-role=body]');
+
+  const paintOff = () => {
+    box.innerHTML = `
+      <p class="hint" style="margin-top:0">Keep the same tasks on your phone and your Mac. Your tasks are saved in a private gist in your GitHub account, and each device checks it when it opens and after every change. Do this once on each device.</p>
+      <ol class="sync-steps">
+        <li><a href="${TOKEN_URL}" target="_blank" rel="noopener">Make a GitHub key</a>. Sign in if asked. Set <b>Expiration</b> to <b>No expiration</b>, leave only <b>gist</b> ticked, then tap <b>Generate token</b> at the bottom and copy the key (it starts with <code>ghp_</code>).</li>
+        <li>Paste it here and tap <b>Turn on sync</b>.</li>
+      </ol>
+      <form class="sync-form" autocomplete="off">
+        <input class="field" type="password" data-role="token" placeholder="Paste key (ghp_…)" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="GitHub key">
+        <button class="btn" type="submit" data-role="go">Turn on sync</button>
+      </form>
+      <p class="hint" data-role="msg" aria-live="polite"></p>
+      <p class="hint">On your second device, use the same key (or a new one). That device then switches to the tasks from the first one.</p>`;
+    const form = box.querySelector('.sync-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = box.querySelector('[data-role=token]').value.trim();
+      const msg = box.querySelector('[data-role=msg]');
+      if (!token) return box.querySelector('[data-role=token]').focus();
+      const go = box.querySelector('[data-role=go]');
+      go.disabled = true;
+      go.textContent = 'Connecting…';
+      msg.textContent = '';
+      try {
+        const { created } = await connect(token);
+        haptic('success');
+        toast(created ? 'Sync is on. Now turn it on on your other device.' : 'Sync is on. This device now has your synced tasks.');
+        paintOn();
+      } catch (err) {
+        haptic('tap');
+        msg.textContent = err.message || 'Couldn’t connect. Check the key and your connection.';
+        go.disabled = false;
+        go.textContent = 'Turn on sync';
+      }
+    });
+  };
+
+  const paintOn = () => {
+    const c = syncConf();
+    box.innerHTML = `
+      <div class="set-group">
+        <div class="set-row"><span class="label">Status<small data-role="state"></small></span></div>
+        <button class="set-row" type="button" data-act="now"><span class="label">Sync now</span>${ICON.right}</button>
+      </div>
+      <p class="hint">Signed in as <b>${esc(c.login || 'GitHub')}</b>. Changes go up a moment after you make them, and come down when the app opens and about once a minute while it’s open. If you change the same task on both devices at once, the device you sync from last keeps its version of that task.</p>
+      <button class="btn danger" type="button" data-act="off">Turn off sync on this device</button>`;
+    const paint = () => {
+      const el = box.querySelector('[data-role=state]');
+      if (el) el.textContent = syncSummary();
+    };
+    paint();
+    const off = onSyncStatus(paint);
+    sheet.wrap.addEventListener('transitionend', () => !sheet.wrap.isConnected && off());
+    box.querySelector('[data-act=now]').addEventListener('click', () => {
+      haptic('tap');
+      syncNow({ force: true });
+    });
+    confirmTap(box.querySelector('[data-act=off]'), 'Tap again to turn off', () => {
+      disconnect();
+      toast('Sync is off on this device. Your tasks stay here.');
+      paintOff();
+    });
+  };
+
+  syncOn() ? paintOn() : paintOff();
 }

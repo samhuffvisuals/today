@@ -218,12 +218,14 @@ function load() {
 
 export const store = {
   state: load(),
-  save() {
+  onSave: null, // set by sync.js: every change gets sent to the other devices
+  save({ quiet = false } = {}) {
     try {
       localStorage.setItem(KEY, JSON.stringify(store.state));
     } catch (e) {
       console.warn('Save failed', e);
     }
+    if (!quiet) store.onSave?.();
   },
 };
 

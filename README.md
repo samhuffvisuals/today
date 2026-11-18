@@ -67,6 +67,7 @@ Home-screen apps keep their data separate from Safari and aren't subject to Safa
 | `js/haptics.js` | `haptic('tap' \| 'success' \| 'snap' \| 'lift' \| 'drop' \| 'celebrate')` |
 | `js/actions.js` | Every state change plus the feedback that goes with it, including adding a pack |
 | `js/ui/render.js` | Header, the day color (red → green), the mood line, pack chips, progress ring, keyed list rendering with FLIP animations |
+| `js/sync.js` | Phone ↔ Mac sync through a private GitHub gist: three-way merge, push after changes, pull on open |
 | `js/ui/gestures.js` | Swipe to complete/delete, long-press drag to reorder, long-press (no drag) for the task menu, long-press header |
 | `js/ui/sheets.js` | Bottom sheets: quick add, edit task, category editor, pack editor, settings |
 | `js/ui/history.js` | "Your days": a five-week calendar of wins |
@@ -94,6 +95,15 @@ With the default 4:00 AM start, 1:30 AM still counts as yesterday.
 - **Duplicate** puts an unchecked copy right under the original, steps included, with Undo.
 - **Steps** (subtasks) go under any task: add them from the menu, from **Add a step** under the steps, or in the task's edit screen. Paste several lines to add several at once.
 - The card shows `1/3` with an arrow; tap it to fold the steps away. Checking the last step checks off the task, unchecking a step opens it again, and checking the task checks every step. Daily tasks start each day with their steps unchecked.
+
+## Sync between your phone and Mac
+
+**Settings → Sync** keeps the same tasks on every device. Tasks are saved in a private gist in your GitHub account.
+
+1. On the first device, tap **Make a GitHub key** (a classic token with only the **gist** box ticked, no expiration), paste it, and tap **Turn on sync**. This creates the gist from that device's tasks.
+2. On the next device (on a Mac: open the site in Safari, **File → Add to Dock**), do the same with the same key. That device switches to the synced tasks.
+
+Changes go up about 1.5 seconds after you make them. Each device pulls when it opens, when you come back to it, and about once a minute while it's open. Each sync compares both copies with the last synced one, so changes made on both devices are combined task by task; if the same field of the same task changed on both, the device syncing second keeps its version. The key stays only on the device (`today.sync` in localStorage) and is never put in backups. **Erase all data** turns sync off on that device first, so it never wipes the others.
 
 ## Haptics on iOS
 

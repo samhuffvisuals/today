@@ -9,6 +9,7 @@ import { openQuickAdd, openEdit, openSettings, openCategory, openPack, openTaskM
 import { openHistory } from './ui/history.js';
 import { toast } from './ui/toast.js';
 import { ICON } from './ui/icons.js';
+import { initSync } from './sync.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -140,6 +141,9 @@ function boot() {
   window.addEventListener('pageshow', checkDay);
   document.addEventListener('daycheck', checkDay);
   setInterval(() => !document.hidden && checkDay(), 30000);
+
+  // Phone ↔ Mac sync (when it's turned on in Settings).
+  initSync();
 
   // Keep bottom sheets above the iOS keyboard.
   const vv = window.visualViewport;
